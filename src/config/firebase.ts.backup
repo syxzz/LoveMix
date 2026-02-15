@@ -1,0 +1,29 @@
+/**
+ * Firebase配置文件
+ * 配置Firebase服务和初始化
+ */
+
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+// Firebase配置
+// 注意：在生产环境中，这些配置应该从环境变量中读取
+const firebaseConfig = {
+  apiKey: "AIzaSyBG0aJCEBft37cX-7PrKpVts_2OQsZiUhg",
+  authDomain: "lovemix-fe1ee.firebaseapp.com",
+  projectId: "lovemix-fe1ee",
+  storageBucket: "lovemix-fe1ee.firebasestorage.app",
+  messagingSenderId: "952157836166",
+  appId: "1:952157836166:web:fc8d34cd6b64062bd45207",
+  measurementId: 'G-7QLC4XNG06'
+};
+
+// 初始化Firebase
+const app = initializeApp(firebaseConfig);
+
+// 导出服务实例
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+export default app;

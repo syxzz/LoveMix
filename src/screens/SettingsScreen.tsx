@@ -15,14 +15,22 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { GradientButton } from '../components/GradientButton';
 import { useAPIKeys } from '../hooks/useAPIKeys';
+import { useAuth } from '../contexts/AuthContext';
+import { useCredits } from '../hooks/useCredits';
+import { RootStackParamList } from '../types';
 import { COLORS, RADIUS, SPACING } from '../utils/constants';
 import { Feather } from '@expo/vector-icons';
 
+type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
+
 export const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<SettingsScreenNavigationProp>();
   const { keys, saveKeys, removeKeys, saving } = useAPIKeys();
+  const { userProfile } = useAuth();
+  const { getCreditsText, isPremium } = useCredits();
 
   const [replicateKey, setReplicateKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
@@ -100,6 +108,77 @@ export const SettingsScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* 用户信息卡片 */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.profileCard}
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileAvatarText}>
+                {userProfile?.displayName?.[0]?.toUpperCase() || '?'}
+              </Text>
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{userProfile?.displayName || '未登录'}</Text>
+              <Text style={styles.profileEmail}>{userProfile?.email || ''}</Text>
+              <View style={styles.membershipBadge}>
+                <Text style={styles.membershipText}>
+                  {isPremium() ? '👑 高级会员' : '免费会员'}
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={24} color={COLORS.textGray} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 快捷功能 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>快捷功能</Text>
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <View style={styles.menuIconContainer}>
+                <Feather name="user" size={20} color={COLORS.primary} />
+              </View>
+              <Text style={styles.menuText}>个人资料</Text>
+              <Feather name="chevron-right" size={20} color={COLORS.textGray} />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('CoupleProfile')}
+            >
+              <View style={styles.menuIconContainer}>
+                <Feather name="heart" size={20} color={COLORS.primary} />
+              </View>
+              <Text style={styles.menuText}>情侣档案</Text>
+              <Feather name="chevron-right" size={20} color={COLORS.textGray} />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Membership')}
+            >
+              <View style={styles.menuIconContainer}>
+                <Feather name="star" size={20} color={COLORS.primary} />
+              </View>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuText}>会员订阅</Text>
+                <Text style={styles.creditsText}>{getCreditsText()}</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={COLORS.textGray} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* API密钥设置 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>API密钥配置</Text>
@@ -316,5 +395,90 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 40,
+  },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.large,
+    padding: SPACING.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  profileAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  profileAvatarText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textDark,
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: COLORS.textGray,
+    marginBottom: 8,
+  },
+  membershipBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.cardBg,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  membershipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+  },
+  menuIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.cardBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  menuText: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.textDark,
+    fontWeight: '500',
+  },
+  menuTextContainer: {
+    flex: 1,
+  },
+  creditsText: {
+    fontSize: 12,
+    color: COLORS.textGray,
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 4,
   },
 });

@@ -1,0 +1,184 @@
+/**
+ * 认证服务
+ * 处理用户登录、注册、登出等操作
+ */
+
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile,
+  User,
+  UserCredential,
+} from 'firebase/auth';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+import { UserProfile, MembershipTier } from '../types';
+
+/**
+ * 用户注册
+ */
+export const registerUser = async (
+  email: string,
+  password: string,
+  displayName: string
+): Promise<UserCredential> => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+    // 更新用户显示名称
+    if (userCredential.user) {
+      await updateProfile(userCredential.user, { displayName });
+
+      // 创建用户档案
+      await createUserProfile(userCredential.user.uid, {
+        email,
+        displayName,
+        membershipTier: 'free',
+        credits: 10, // 新用户赠送10次免费使用
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+
+    return userCredential;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * 用户登录
+ */
+export const loginUser = async (
+  email: string,
+  password: string
+): Promise<UserCredential> => {
+  try {
+    return await signInWithEmailAndPassword(auth, email, password);
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * 用户登出
+ */
+export const logoutUser = async (): Promise<void> => {
+  try {
+    await signOut(auth);
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * 发送密码重置邮件
+ */
+export const resetPassword = async (email: string): Promise<void> => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * 创建用户档案
+ */
+export const createUserProfile = async (
+  uid: string,
+  profileData: Partial<UserProfile>
+): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await setDoc(userRef, {
+      ...profileData,
+      uid,
+    });
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * 获取用户档案
+ */
+export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      return userSnap.data() as UserProfile;
+    }
+    return null;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * 更新用户档案
+ */
+export const updateUserProfile = async (
+  uid: string,
+  updates: Partial<UserProfile>
+): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      ...updates,
+      updatedAt: Date.now(),
+    });
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * 扣除使用次数
+ */
+export const deductCredits = async (uid: string, amount: number = 1): Promise<boolean> => {
+  try {
+    const profile = await getUserProfile(uid);
+    if (!profile) return false;
+
+    // 高级会员无限制
+    if (profile.membershipTier === 'premium') {
+      return true;
+    }
+
+    // 检查积分是否足够
+    if (profile.credits < amount) {
+      return false;
+    }
+
+    // 扣除积分
+    await updateUserProfile(uid, {
+      credits: profile.credits - amount,
+    });
+
+    return true;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * 升级会员
+ */
+export const upgradeMembership = async (
+  uid: string,
+  tier: MembershipTier
+): Promise<void> => {
+  try {
+    await updateUserProfile(uid, {
+      membershipTier: tier,
+      membershipExpiry: tier === 'premium' ? Date.now() + 30 * 24 * 60 * 60 * 1000 : undefined,
+    });
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};

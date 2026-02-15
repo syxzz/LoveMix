@@ -17,19 +17,18 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { COLORS, RADIUS, SPACING, HOME_FEATURES } from '../utils/constants';
-import { getLovePoints } from '../services/storage';
+import { useAuth } from '../contexts/AuthContext';
+import { useCredits } from '../hooks/useCredits';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const [lovePoints, setLovePoints] = useState(520);
+  const { userProfile } = useAuth();
+  const { getCreditsText, isPremium } = useCredits();
   const heartScale = React.useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // 加载爱心值
-    loadLovePoints();
-
     // 爱心跳动动画
     Animated.loop(
       Animated.sequence([
@@ -47,11 +46,6 @@ export const HomeScreen: React.FC = () => {
     ).start();
   }, []);
 
-  const loadLovePoints = async () => {
-    const points = await getLovePoints();
-    setLovePoints(points);
-  };
-
   const handleFeaturePress = (screen: string) => {
     navigation.navigate(screen as keyof RootStackParamList);
   };
@@ -66,16 +60,42 @@ export const HomeScreen: React.FC = () => {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Text style={styles.greeting}>Hi，宝贝</Text>
-          <Animated.View
-            style={[
-              styles.lovePointsContainer,
-              { transform: [{ scale: heartScale }] },
-            ]}
+          <View>
+            <Text style={styles.greeting}>
+              Hi，{userProfile?.displayName || '宝贝'}
+            </Text>
+            {isPremium() && (
+              <Text style={styles.memberBadge}>👑 高级会员</Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Profile')}
           >
-            <Text style={styles.lovePoints}>❤️ {lovePoints}</Text>
-          </Animated.View>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {userProfile?.displayName?.[0]?.toUpperCase() || '?'}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
+        <Animated.View
+          style={[
+            styles.creditsContainer,
+            { transform: [{ scale: heartScale }] },
+          ]}
+        >
+          <Text style={styles.creditsLabel}>剩余次数</Text>
+          <Text style={styles.creditsValue}>{getCreditsText()}</Text>
+          {!isPremium() && (
+            <TouchableOpacity
+              style={styles.upgradeButton}
+              onPress={() => navigation.navigate('Membership')}
+            >
+              <Text style={styles.upgradeText}>升级会员</Text>
+            </TouchableOpacity>
+          )}
+        </Animated.View>
       </LinearGradient>
 
       {/* 功能卡片列表 */}
@@ -114,30 +134,74 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    height: 200,
     paddingTop: 60,
     paddingHorizontal: SPACING.lg,
+    paddingBottom: 24,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 20,
   },
   greeting: {
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.textLight,
   },
-  lovePointsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  lovePoints: {
-    fontSize: 18,
-    fontWeight: '600',
+  memberBadge: {
+    fontSize: 14,
     color: COLORS.textLight,
+    marginTop: 4,
+    opacity: 0.9,
+  },
+  profileButton: {
+    padding: 4,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.textLight,
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
+  },
+  creditsContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  creditsLabel: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    opacity: 0.9,
+    marginBottom: 4,
+  },
+  creditsValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
+  },
+  upgradeButton: {
+    backgroundColor: COLORS.textLight,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  upgradeText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   scrollView: {
     flex: 1,
