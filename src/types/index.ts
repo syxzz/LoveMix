@@ -3,6 +3,10 @@
  * 定义整个应用中使用的所有类型接口
  */
 
+// 导出子模块类型
+export * from './user';
+export * from './history';
+
 // 图片选择结果类型
 export interface ImagePickerResult {
   uri: string;
@@ -55,12 +59,20 @@ export interface CardResult {
 
 // 导航参数类型
 export type RootStackParamList = {
+  Welcome: undefined;
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
   Home: undefined;
   FaceMerge: undefined;
   Card: undefined;
   Date: undefined;
   Sticker: undefined;
   Settings: undefined;
+  Profile: undefined;
+  History: undefined;
+  Membership: undefined;
+  Community: undefined;
 };
 
 // 场景选项

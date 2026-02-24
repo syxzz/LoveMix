@@ -1,6 +1,7 @@
 /**
  * HomeScreen - 首页
  * 显示四个功能入口卡片和顶部渐变区域
+ * 增加个人中心入口
  */
 
 import React, { useEffect, useState } from 'react';
@@ -11,18 +12,23 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAtom } from 'jotai';
 import { RootStackParamList } from '../types';
 import { COLORS, RADIUS, SPACING, HOME_FEATURES } from '../utils/constants';
 import { getLovePoints } from '../services/storage';
+import { userAtom } from '../store';
+import { Feather } from '@expo/vector-icons';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const [user] = useAtom(userAtom);
   const [lovePoints, setLovePoints] = useState(520);
   const heartScale = React.useRef(new Animated.Value(1)).current;
 
@@ -49,11 +55,15 @@ export const HomeScreen: React.FC = () => {
 
   const loadLovePoints = async () => {
     const points = await getLovePoints();
-    setLovePoints(points);
+    setLovePoints(user?.lovePoints || points);
   };
 
   const handleFeaturePress = (screen: string) => {
     navigation.navigate(screen as keyof RootStackParamList);
+  };
+
+  const handleProfilePress = () => {
+    navigation.navigate('Profile');
   };
 
   return (
@@ -66,15 +76,40 @@ export const HomeScreen: React.FC = () => {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Text style={styles.greeting}>Hi，宝贝</Text>
-          <Animated.View
-            style={[
-              styles.lovePointsContainer,
-              { transform: [{ scale: heartScale }] },
-            ]}
-          >
-            <Text style={styles.lovePoints}>❤️ {lovePoints}</Text>
-          </Animated.View>
+          <View style={styles.userSection}>
+            <Text style={styles.greeting}>Hi，{user?.username || '宝贝'}</Text>
+            <Text style={styles.membershipBadge}>
+              {user?.membershipType === 'vip'
+                ? 'VIP会员'
+                : user?.membershipType === 'premium'
+                ? '高级会员'
+                : '免费会员'}
+            </Text>
+          </View>
+
+          <View style={styles.rightSection}>
+            <Animated.View
+              style={[
+                styles.lovePointsContainer,
+                { transform: [{ scale: heartScale }] },
+              ]}
+            >
+              <Text style={styles.lovePoints}>❤️ {lovePoints}</Text>
+            </Animated.View>
+
+            <TouchableOpacity
+              style={styles.avatarButton}
+              onPress={handleProfilePress}
+            >
+              {user?.avatar ? (
+                <Image source={{ uri: user.avatar }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Feather name="user" size={20} color={COLORS.textLight} />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 
@@ -121,12 +156,31 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  userSection: {
+    flex: 1,
   },
   greeting: {
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.textLight,
+    marginBottom: 8,
+  },
+  membershipBadge: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
   },
   lovePointsContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
@@ -138,6 +192,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: COLORS.textLight,
+  },
+  avatarButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,

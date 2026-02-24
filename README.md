@@ -1,6 +1,20 @@
 # LoveMix - 情侣AI创意App 💑
 
-LoveMix 是一款专为情侣打造的AI创意应用，使用 React Native 和 Expo 开发。提供AI头像融合、纪念日卡片、虚拟约会场景和表情包生成等温馨浪漫的功能。
+LoveMix 是一款专为情侣打造的商业化AI创意应用，使用 React Native 和 Expo 开发。提供完整的用户系统、会员订阅、AI头像融合、纪念日卡片、虚拟约会场景和表情包生成等温馨浪漫的功能。
+
+## 🎉 商业化升级
+
+LoveMix 已完成商业化升级，新增以下核心功能:
+
+- ✅ **用户认证系统**: 注册、登录、密码重置
+- ✅ **个人资料管理**: 头像、昵称、会员等级、使用统计
+- ✅ **会员订阅体系**: 免费版、高级会员(¥19.9/月)、VIP会员(¥99/年)
+- ✅ **作品历史记录**: 所有生成作品的历史管理
+- ✅ **社区作品广场**: 浏览和分享用户作品
+- ✅ **使用次数限制**: 基于会员等级的功能限制
+- ✅ **优化的UI/UX**: 引导页、空状态、流畅动画
+
+详细升级说明请查看 [UPGRADE_GUIDE.md](UPGRADE_GUIDE.md)
 
 ## ✨ 主要功能
 
@@ -46,6 +60,30 @@ LoveMix 是一款专为情侣打造的AI创意应用，使用 React Native 和 E
 - **图片处理**: Expo Image Picker, Expo Media Library
 - **存储**: AsyncStorage (普通数据), Expo Secure Store (API密钥)
 - **API调用**: Axios
+- **认证**: 本地认证系统(可扩展为后端API)
+
+## 🏗️ 商业化架构
+
+### 用户系统
+- 邮箱注册/登录
+- 密码加密存储
+- Token认证机制
+- 个人资料管理
+
+### 会员体系
+- **免费版**: 每日3次生成,基础功能
+- **高级会员**: ¥19.9/月,每日20次,全功能解锁
+- **VIP会员**: ¥99/年,无限次生成,专属特权
+
+### 数据管理
+- 作品历史记录
+- 使用统计追踪
+- 云端同步准备(架构已就绪)
+
+### 社区功能
+- 作品分享广场
+- 点赞和浏览统计
+- 用户互动
 
 ## 🚀 快速开始
 
@@ -119,7 +157,7 @@ LoveMix 支持真实的AI生成功能，需要配置以下API密钥：
 
 ```
 LoveMix/
-├── App.tsx                          # 主入口文件，配置导航
+├── App.tsx                          # 主入口文件，配置导航和认证
 ├── babel.config.js                  # Babel配置
 ├── tailwind.config.js               # Tailwind CSS配置
 ├── package.json                     # 项目依赖
@@ -127,11 +165,19 @@ LoveMix/
 │
 ├── src/
 │   ├── screens/                     # 页面组件
+│   │   ├── WelcomeScreen.tsx        # 欢迎引导页
+│   │   ├── LoginScreen.tsx          # 登录页面
+│   │   ├── RegisterScreen.tsx       # 注册页面
+│   │   ├── ForgotPasswordScreen.tsx # 忘记密码页面
 │   │   ├── HomeScreen.tsx           # 首页 - 四个功能入口
 │   │   ├── FaceMergeScreen.tsx      # AI头像融合页面
 │   │   ├── CardScreen.tsx           # 纪念日卡片页面
 │   │   ├── DateScreen.tsx           # 虚拟约会场景页面
 │   │   ├── StickerScreen.tsx        # 表情包生成页面
+│   │   ├── ProfileScreen.tsx        # 个人资料页面
+│   │   ├── MembershipScreen.tsx     # 会员订阅页面
+│   │   ├── HistoryScreen.tsx        # 作品历史页面
+│   │   ├── CommunityScreen.tsx      # 社区广场页面
 │   │   └── SettingsScreen.tsx       # 设置页面
 │   │
 │   ├── components/                  # 可复用组件
@@ -143,6 +189,7 @@ LoveMix/
 │   │   └── TabBar.tsx               # 底部导航栏
 │   │
 │   ├── services/                    # 服务层
+│   │   ├── auth.ts                  # 认证服务
 │   │   ├── replicate.ts             # Replicate API调用
 │   │   ├── openai.ts                # OpenAI API调用
 │   │   └── storage.ts               # 本地存储服务
@@ -156,7 +203,9 @@ LoveMix/
 │   │   └── helpers.ts               # 辅助函数
 │   │
 │   ├── types/                       # TypeScript类型定义
-│   │   └── index.ts                 # 全局类型
+│   │   ├── index.ts                 # 全局类型
+│   │   ├── user.ts                  # 用户相关类型
+│   │   └── history.ts               # 历史记录类型
 │   │
 │   └── store/                       # 状态管理
 │       └── index.ts                 # Jotai状态定义
@@ -293,13 +342,32 @@ A: 目前不支持云同步，所有数据仅存储在本地设备。
 
 ## 🚧 未来计划
 
-- [ ] 添加更多AI生成场景
-- [ ] 支持视频生成功能
-- [ ] 云端数据同步
-- [ ] 多语言支持
+### 短期优化
+- [ ] 接入真实支付系统(微信支付/支付宝)
+- [ ] 实现真实的后端API
+- [ ] 添加数据云端同步
+- [ ] 实现推送通知
+
+### 中期规划
+- [ ] 添加社交功能(关注、评论)
+- [ ] 实现作品分享到社交平台
+- [ ] 添加每日签到和任务系统
+- [ ] 实现积分商城
 - [ ] 深色模式
-- [ ] 社交分享功能
-- [ ] 生成历史管理
+
+### 长期规划
+- [ ] AI模型优化和定制
+- [ ] 更多创意功能
+- [ ] 企业版/定制版
+- [ ] 国际化支持
+- [ ] 支持视频生成功能
+
+## 📚 文档
+
+- [升级指南](UPGRADE_GUIDE.md) - 商业化升级详细说明
+- [用户指南](USER_GUIDE.md) - 完整的用户使用手册
+- [快速开始](QUICKSTART.md) - 开发快速入门
+- [项目总结](PROJECT_SUMMARY.md) - 项目概览
 
 ## 📄 许可证
 

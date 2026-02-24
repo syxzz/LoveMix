@@ -15,14 +15,27 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAtom, useSetAtom } from 'jotai';
 import { GradientButton } from '../components/GradientButton';
 import { useAPIKeys } from '../hooks/useAPIKeys';
 import { COLORS, RADIUS, SPACING } from '../utils/constants';
 import { Feather } from '@expo/vector-icons';
+import { RootStackParamList } from '../types';
+import { userAtom, isAuthenticatedAtom } from '../store';
+import { logout } from '../services/auth';
+
+type SettingsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Settings'
+>;
 
 export const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<SettingsScreenNavigationProp>();
   const { keys, saveKeys, removeKeys, saving } = useAPIKeys();
+  const [user] = useAtom(userAtom);
+  const setUser = useSetAtom(userAtom);
+  const setIsAuthenticated = useSetAtom(isAuthenticatedAtom);
 
   const [replicateKey, setReplicateKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
@@ -76,6 +89,49 @@ export const SettingsScreen: React.FC = () => {
     );
   };
 
+  const handleLogout = () => {
+    Alert.alert('确认退出', '确定要退出登录吗？', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '确定',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          setUser(null);
+          setIsAuthenticated(false);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Welcome' }],
+          });
+        },
+      },
+    ]);
+  };
+
+  const menuItems = [
+    {
+      icon: 'user',
+      title: '个人资料',
+      onPress: () => navigation.navigate('Profile'),
+    },
+    {
+      icon: 'clock',
+      title: '我的作品',
+      onPress: () => navigation.navigate('History'),
+    },
+    {
+      icon: 'award',
+      title: '会员订阅',
+      badge: user?.membershipType === 'free' ? '升级' : undefined,
+      onPress: () => navigation.navigate('Membership'),
+    },
+    {
+      icon: 'users',
+      title: '作品广场',
+      onPress: () => navigation.navigate('Community'),
+    },
+  ];
+
   return (
     <View style={styles.container}>
       {/* 顶部标题栏 */}
@@ -100,6 +156,40 @@ export const SettingsScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* 快捷菜单 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>账户管理</Text>
+          <View style={styles.menuCard}>
+            {menuItems.map((item, index) => (
+              <React.Fragment key={item.title}>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={item.onPress}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.menuLeft}>
+                    <Feather
+                      name={item.icon as any}
+                      size={20}
+                      color={COLORS.textDark}
+                    />
+                    <Text style={styles.menuTitle}>{item.title}</Text>
+                  </View>
+                  <View style={styles.menuRight}>
+                    {item.badge && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{item.badge}</Text>
+                      </View>
+                    )}
+                    <Feather name="chevron-right" size={20} color={COLORS.textGray} />
+                  </View>
+                </TouchableOpacity>
+                {index < menuItems.length - 1 && <View style={styles.divider} />}
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
+
         {/* API密钥设置 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>API密钥配置</Text>
@@ -182,15 +272,23 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
+        {/* 退出登录 */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Feather name="log-out" size={20} color={COLORS.error} />
+          <Text style={styles.logoutText}>退出登录</Text>
+        </TouchableOpacity>
+
         {/* 关于信息 */}
         <View style={styles.aboutSection}>
           <Text style={styles.aboutTitle}>关于 LoveMix</Text>
           <Text style={styles.aboutText}>
             LoveMix 是一款专为情侣打造的AI创意应用，提供头像融合、纪念日卡片、虚拟约会场景和表情包生成等功能。
           </Text>
-          <Text style={styles.aboutText}>
-            版本：1.0.0
-          </Text>
+          <Text style={styles.aboutText}>版本：1.0.0</Text>
           <Text style={styles.aboutText}>
             所有数据均存储在本地，保护您的隐私安全。
           </Text>
@@ -250,6 +348,53 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     lineHeight: 20,
   },
+  menuCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.large,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  menuTitle: {
+    fontSize: 16,
+    color: COLORS.textDark,
+  },
+  menuRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  badge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textLight,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: SPACING.lg,
+  },
   card: {
     backgroundColor: COLORS.background,
     borderRadius: RADIUS.large,
@@ -296,6 +441,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.error,
     fontWeight: '600',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.large,
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.error,
   },
   aboutSection: {
     backgroundColor: COLORS.cardBg,

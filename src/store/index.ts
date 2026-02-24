@@ -4,7 +4,14 @@
  */
 
 import { atom } from 'jotai';
-import { APIKeys, GenerationResult } from '../types';
+import { APIKeys, GenerationResult, User, WorkHistory } from '../types';
+
+/**
+ * 用户认证状态
+ */
+export const userAtom = atom<User | null>(null);
+export const isAuthenticatedAtom = atom<boolean>(false);
+export const authLoadingAtom = atom<boolean>(true);
 
 /**
  * 爱心值状态
@@ -20,6 +27,11 @@ export const apiKeysAtom = atom<APIKeys>({});
  * 生成历史状态
  */
 export const generationHistoryAtom = atom<GenerationResult[]>([]);
+
+/**
+ * 作品历史状态
+ */
+export const workHistoryAtom = atom<WorkHistory[]>([]);
 
 /**
  * 加载状态
