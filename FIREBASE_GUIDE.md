@@ -47,11 +47,11 @@
 ### 4. 安装依赖
 
 ```bash
-# 安装 Firebase SDK
-npm install @react-native-firebase/app @react-native-firebase/auth
+# 安装 Firebase JS SDK（兼容 Expo）
+npm install firebase
 
-# iOS 需要安装 pods
-cd ios && pod install && cd ..
+# 注意：不需要安装 @react-native-firebase，因为它不兼容 Expo 管理的工作流
+# Firebase JS SDK 完全支持 React Native 和 Expo
 ```
 
 ### 5. 配置环境变量
@@ -73,9 +73,29 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
 创建 `src/services/firebaseAuth.ts`:
 
 ```typescript
-import auth from '@react-native-firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInAnonymously,
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile,
+  onAuthStateChanged as firebaseOnAuthStateChanged,
+} from 'firebase/auth';
 import { User, LoginForm, RegisterForm } from '../types';
-import { logger } from '../config';
+import { logger, FIREBASE_CONFIG } from '../config';
+
+// 初始化 Firebase
+let firebaseApp;
+if (getApps().length === 0) {
+  firebaseApp = initializeApp(FIREBASE_CONFIG);
+} else {
+  firebaseApp = getApp();
+}
+
+const auth = getAuth(firebaseApp);
 
 /**
  * Firebase 用户登录
@@ -84,7 +104,8 @@ export const firebaseLogin = async (form: LoginForm): Promise<User> => {
   logger.info('Firebase login:', form.email);
 
   try {
-    const userCredential = await auth().signInWithEmailAndPassword(
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
       form.email,
       form.password
     );
@@ -96,6 +117,7 @@ export const firebaseLogin = async (form: LoginForm): Promise<User> => {
       id: firebaseUser.uid,
       email: firebaseUser.email || '',
       username: firebaseUser.displayName || '用户',
+      avatar: firebaseUser.photoURL || undefined,
       createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
       membershipType: 'free',
       lovePoints: 520,
@@ -113,6 +135,9 @@ export const firebaseLogin = async (form: LoginForm): Promise<User> => {
     throw new Error(getFirebaseErrorMessage(error.code));
   }
 };
+
+// ... 其他方法类似
+```
 
 /**
  * Firebase 用户注册
@@ -314,10 +339,7 @@ export const logout = USE_FIREBASE ? firebaseAuth.firebaseLogout : localAuth.log
 
 ### 2. 安装依赖
 
-```bash
-npm install @react-native-firebase/firestore
-cd ios && pod install && cd ..
-```
+Firebase JS SDK 已经包含了 Firestore，无需额外安装。
 
 ### 3. 数据结构设计
 
@@ -346,28 +368,32 @@ works/
 ### 4. 创建 Firestore 服务
 
 ```typescript
-import firestore from '@react-native-firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, addDoc, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { firebaseApp } from './firebaseAuth'; // 导入已初始化的 app
+
+const db = getFirestore(firebaseApp);
 
 export const saveUserData = async (userId: string, data: any) => {
-  await firestore().collection('users').doc(userId).set(data, { merge: true });
+  await setDoc(doc(db, 'users', userId), data, { merge: true });
 };
 
 export const getUserData = async (userId: string) => {
-  const doc = await firestore().collection('users').doc(userId).get();
-  return doc.data();
+  const docSnap = await getDoc(doc(db, 'users', userId));
+  return docSnap.data();
 };
 
 export const saveWork = async (work: any) => {
-  await firestore().collection('works').add(work);
+  await addDoc(collection(db, 'works'), work);
 };
 
 export const getUserWorks = async (userId: string) => {
-  const snapshot = await firestore()
-    .collection('works')
-    .where('userId', '==', userId)
-    .orderBy('createdAt', 'desc')
-    .get();
+  const q = query(
+    collection(db, 'works'),
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
 
+  const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 ```
@@ -384,20 +410,24 @@ export const getUserWorks = async (userId: string) => {
 
 ### 2. 安装依赖
 
-```bash
-npm install @react-native-firebase/storage
-cd ios && pod install && cd ..
-```
+Firebase JS SDK 已经包含了 Storage，无需额外安装。
 
 ### 3. 上传图片示例
 
 ```typescript
-import storage from '@react-native-firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { firebaseApp } from './firebaseAuth';
+
+const storage = getStorage(firebaseApp);
 
 export const uploadImage = async (uri: string, path: string) => {
-  const reference = storage().ref(path);
-  await reference.putFile(uri);
-  const url = await reference.getDownloadURL();
+  // 将 URI 转换为 Blob
+  const response = await fetch(uri);
+  const blob = await response.blob();
+
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, blob);
+  const url = await getDownloadURL(storageRef);
   return url;
 };
 ```
@@ -463,11 +493,11 @@ npm start
 
 ## 常见问题
 
-### Q: iOS 编译失败?
-A: 确保已运行 `cd ios && pod install`
+### Q: 为什么使用 Firebase JS SDK 而不是 @react-native-firebase?
+A: Firebase JS SDK 完全兼容 Expo 管理的工作流，无需配置原生模块。@react-native-firebase 需要 Expo 开发构建或裸工作流。
 
-### Q: Android 编译失败?
-A: 检查 `google-services.json` 是否放在正确位置
+### Q: Firebase JS SDK 性能如何?
+A: Firebase JS SDK 在 React Native 中性能优秀，支持所有主要功能（认证、Firestore、Storage 等）。
 
 ### Q: 认证失败?
 A: 检查 Firebase Console 中是否启用了对应的登录方式

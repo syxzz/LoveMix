@@ -14,6 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.lovemix.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "LoveMix需要访问您的相册以保存生成的图片",
         "NSCameraUsageDescription": "LoveMix需要访问相机以拍摄照片",
@@ -21,6 +22,7 @@
       }
     },
     "android": {
+      "package": "com.lovemix.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

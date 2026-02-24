@@ -31,8 +31,9 @@ import {
 
 import { RootStackParamList } from './src/types';
 import { userAtom, isAuthenticatedAtom, authLoadingAtom } from './src/store';
-import { getCurrentUser } from './src/services/auth';
+import { getCurrentUser, onAuthStateChanged } from './src/services/auth';
 import { COLORS } from './src/utils/constants';
+import { USE_FIREBASE } from './src/config';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -44,6 +45,16 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     checkAuth();
+
+    // 如果使用 Firebase，监听认证状态变化
+    if (USE_FIREBASE && onAuthStateChanged) {
+      const unsubscribe = onAuthStateChanged((user) => {
+        setUser(user);
+        setIsAuthenticated(!!user);
+      });
+
+      return () => unsubscribe();
+    }
   }, []);
 
   const checkAuth = async () => {

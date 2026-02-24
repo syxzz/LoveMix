@@ -1,12 +1,14 @@
 /**
  * 用户认证服务
  * 处理登录、注册、密码重置等功能
- * 支持 Debug 模式和游客登录
+ * 支持 Firebase 和本地认证，支持 Debug 模式和游客登录
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, LoginForm, RegisterForm } from '../types';
-import { DEBUG_CONFIG, logger } from '../config';
+import { DEBUG_CONFIG, logger, USE_FIREBASE } from '../config';
+import * as firebaseAuth from './firebaseAuth';
+import * as localAuth from './localAuth';
 
 const AUTH_TOKEN_KEY = '@lovemix_auth_token';
 const USER_DATA_KEY = '@lovemix_user_data';
@@ -49,23 +51,19 @@ export const debugAdminLogin = async (): Promise<User> => {
  */
 export const guestLogin = async (): Promise<User> => {
   logger.info('Guest login');
-  await delay(500);
 
-  const guestUser: User = {
-    id: `guest_${Date.now()}`,
-    email: '',
-    username: '游客用户',
-    createdAt: new Date().toISOString(),
-    membershipType: 'free',
-    lovePoints: 100,
-    usageCount: {
-      faceMerge: 0,
-      card: 0,
-      date: 0,
-      sticker: 0,
-    },
-  };
+  let guestUser: User;
 
+  if (USE_FIREBASE) {
+    // 使用 Firebase 匿名登录
+    guestUser = await firebaseAuth.firebaseGuestLogin();
+  } else {
+    // 使用本地游客登录
+    await delay(500);
+    guestUser = await localAuth.localGuestLogin();
+  }
+
+  // 保存到本地存储
   const token = `guest_token_${Date.now()}`;
   await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
   await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(guestUser));
@@ -102,7 +100,6 @@ export const convertGuestToUser = async (form: RegisterForm): Promise<User> => {
  */
 export const login = async (form: LoginForm): Promise<User> => {
   logger.info('User login:', form.email);
-  await delay(1000);
 
   // Debug 模式 - 管理员快速登录
   if (
@@ -113,28 +110,24 @@ export const login = async (form: LoginForm): Promise<User> => {
     return debugAdminLogin();
   }
 
-  // 模拟登录验证
-  const storedUsers = await AsyncStorage.getItem('@lovemix_users');
-  const users = storedUsers ? JSON.parse(storedUsers) : [];
+  let user: User;
 
-  const user = users.find(
-    (u: any) => u.email === form.email && u.password === form.password
-  );
-
-  if (!user) {
-    throw new Error('邮箱或密码错误');
+  if (USE_FIREBASE) {
+    // 使用 Firebase 登录
+    user = await firebaseAuth.firebaseLogin(form);
+  } else {
+    // 使用本地登录
+    await delay(1000);
+    user = await localAuth.localLogin(form);
   }
 
-  // 生成token
+  // 保存到本地存储
   const token = `token_${Date.now()}_${Math.random()}`;
   await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
-
-  // 保存用户数据（不包含密码）
-  const { password, ...userData } = user;
-  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
   await AsyncStorage.setItem(IS_GUEST_KEY, 'false');
 
-  return userData;
+  return user;
 };
 
 /**
@@ -142,7 +135,6 @@ export const login = async (form: LoginForm): Promise<User> => {
  */
 export const register = async (form: RegisterForm): Promise<User> => {
   logger.info('User register:', form.email);
-  await delay(1000);
 
   // 验证密码
   if (form.password !== form.confirmPassword) {
@@ -153,43 +145,24 @@ export const register = async (form: RegisterForm): Promise<User> => {
     throw new Error('密码长度至少6位');
   }
 
-  // 检查邮箱是否已注册
-  const storedUsers = await AsyncStorage.getItem('@lovemix_users');
-  const users = storedUsers ? JSON.parse(storedUsers) : [];
+  let user: User;
 
-  if (users.find((u: any) => u.email === form.email)) {
-    throw new Error('该邮箱已被注册');
+  if (USE_FIREBASE) {
+    // 使用 Firebase 注册
+    user = await firebaseAuth.firebaseRegister(form);
+  } else {
+    // 使用本地注册
+    await delay(1000);
+    user = await localAuth.localRegister(form);
   }
 
-  // 创建新用户
-  const newUser: User & { password: string } = {
-    id: `user_${Date.now()}`,
-    email: form.email,
-    username: form.username,
-    password: form.password,
-    createdAt: new Date().toISOString(),
-    membershipType: 'free',
-    lovePoints: 520,
-    usageCount: {
-      faceMerge: 0,
-      card: 0,
-      date: 0,
-      sticker: 0,
-    },
-  };
-
-  users.push(newUser);
-  await AsyncStorage.setItem('@lovemix_users', JSON.stringify(users));
-
-  // 自动登录
+  // 保存到本地存储
   const token = `token_${Date.now()}_${Math.random()}`;
   await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
-
-  const { password, ...userData } = newUser;
-  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
   await AsyncStorage.setItem(IS_GUEST_KEY, 'false');
 
-  return userData;
+  return user;
 };
 
 /**
@@ -197,6 +170,13 @@ export const register = async (form: RegisterForm): Promise<User> => {
  */
 export const logout = async (): Promise<void> => {
   logger.info('User logout');
+
+  // 如果使用 Firebase，先登出 Firebase
+  if (USE_FIREBASE) {
+    await firebaseAuth.firebaseLogout();
+  }
+
+  // 清除本地存储
   await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
   await AsyncStorage.removeItem(USER_DATA_KEY);
   await AsyncStorage.removeItem(IS_GUEST_KEY);
@@ -206,17 +186,27 @@ export const logout = async (): Promise<void> => {
  * 获取当前用户
  */
 export const getCurrentUser = async (): Promise<User | null> => {
+  // 优先从本地存储获取
   const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
   if (!token) {
     return null;
   }
 
   const userData = await AsyncStorage.getItem(USER_DATA_KEY);
-  if (!userData) {
-    return null;
+  if (userData) {
+    return JSON.parse(userData);
   }
 
-  return JSON.parse(userData);
+  // 如果本地没有，尝试从 Firebase 获取
+  if (USE_FIREBASE) {
+    const firebaseUser = firebaseAuth.getCurrentFirebaseUser();
+    if (firebaseUser) {
+      await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(firebaseUser));
+      return firebaseUser;
+    }
+  }
+
+  return null;
 };
 
 /**
@@ -252,18 +242,14 @@ export const updateUser = async (updates: Partial<User>): Promise<User> => {
  * 重置密码
  */
 export const resetPassword = async (email: string): Promise<void> => {
-  await delay(1000);
-
-  const storedUsers = await AsyncStorage.getItem('@lovemix_users');
-  const users = storedUsers ? JSON.parse(storedUsers) : [];
-
-  const user = users.find((u: any) => u.email === email);
-  if (!user) {
-    throw new Error('该邮箱未注册');
+  if (USE_FIREBASE) {
+    // 使用 Firebase 重置密码
+    await firebaseAuth.firebaseResetPassword(email);
+  } else {
+    // 使用本地重置密码
+    await delay(1000);
+    await localAuth.localResetPassword(email);
   }
-
-  // 实际应用中应该发送重置密码邮件
-  // 这里仅模拟成功
 };
 
 /**
@@ -273,3 +259,10 @@ export const checkAuthStatus = async (): Promise<boolean> => {
   const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
   return !!token;
 };
+
+/**
+ * 监听认证状态变化（仅 Firebase 支持）
+ */
+export const onAuthStateChanged = USE_FIREBASE
+  ? firebaseAuth.onAuthStateChanged
+  : undefined;
