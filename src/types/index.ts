@@ -55,19 +55,12 @@ export interface CardResult {
 
 // 导航参数类型
 export type RootStackParamList = {
-  Onboarding: undefined;
-  Login: undefined;
-  Register: undefined;
-  ForgotPassword: undefined;
   Home: undefined;
   FaceMerge: undefined;
   Card: undefined;
   Date: undefined;
   Sticker: undefined;
   Settings: undefined;
-  Profile: undefined;
-  CoupleProfile: undefined;
-  Membership: undefined;
 };
 
 // 场景选项
@@ -82,50 +75,4 @@ export interface QuickTag {
   id: string;
   text: string;
   emoji: string;
-}
-
-// 会员等级
-export type MembershipTier = 'free' | 'premium';
-
-// 用户档案
-export interface UserProfile {
-  uid: string;
-  email: string;
-  displayName: string;
-  photoURL?: string;
-  membershipTier: MembershipTier;
-  credits: number; // 免费用户的使用次数
-  membershipExpiry?: number; // 会员到期时间
-  coupleProfile?: CoupleProfile;
-  createdAt: number;
-  updatedAt: number;
-}
-
-// 情侣档案
-export interface CoupleProfile {
-  partnerName: string;
-  userNickname: string;
-  partnerNickname: string;
-  anniversaryDate: string;
-  relationshipStatus: 'dating' | 'engaged' | 'married';
-  photoURL?: string;
-}
-
-// 使用记录
-export interface UsageRecord {
-  id: string;
-  userId: string;
-  type: 'merge' | 'card' | 'date' | 'sticker';
-  timestamp: number;
-  creditsUsed: number;
-}
-
-// 订阅计划
-export interface SubscriptionPlan {
-  id: string;
-  name: string;
-  tier: MembershipTier;
-  price: number;
-  duration: number; // 天数
-  features: string[];
 }

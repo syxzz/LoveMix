@@ -1,13 +1,7 @@
+// Screen exports
 export { HomeScreen } from './HomeScreen';
 export { FaceMergeScreen } from './FaceMergeScreen';
 export { CardScreen } from './CardScreen';
 export { DateScreen } from './DateScreen';
 export { StickerScreen } from './StickerScreen';
 export { SettingsScreen } from './SettingsScreen';
-export { OnboardingScreen } from './OnboardingScreen';
-export { LoginScreen } from './LoginScreen';
-export { RegisterScreen } from './RegisterScreen';
-export { ForgotPasswordScreen } from './ForgotPasswordScreen';
-export { ProfileScreen } from './ProfileScreen';
-export { CoupleProfileScreen } from './CoupleProfileScreen';
-export { MembershipScreen } from './MembershipScreen';
