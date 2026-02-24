@@ -10,6 +10,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider as JotaiProvider, useSetAtom, useAtomValue } from 'jotai';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useFonts, Niconne_400Regular } from '@expo-google-fonts/niconne';
+import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
+import { DancingScript_400Regular, DancingScript_700Bold } from '@expo-google-fonts/dancing-script';
 
 // 导入所有屏幕
 import {
@@ -34,6 +37,8 @@ import { userAtom, isAuthenticatedAtom, authLoadingAtom } from './src/store';
 import { getCurrentUser, onAuthStateChanged } from './src/services/auth';
 import { COLORS } from './src/utils/constants';
 import { USE_FIREBASE } from './src/config';
+import './src/i18n'; // 初始化 i18n
+import { loadLanguage } from './src/i18n';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -45,6 +50,9 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     checkAuth();
+
+    // 加载语言设置
+    loadLanguage();
 
     // 如果使用 Firebase，监听认证状态变化
     if (USE_FIREBASE && onAuthStateChanged) {
@@ -118,6 +126,23 @@ const Navigation: React.FC = () => {
 };
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Niconne_400Regular,
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    DancingScript_400Regular,
+    DancingScript_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <JotaiProvider>

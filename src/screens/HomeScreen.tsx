@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAtom } from 'jotai';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { COLORS, RADIUS, SPACING, HOME_FEATURES } from '../utils/constants';
 import { getLovePoints } from '../services/storage';
@@ -29,6 +30,7 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'H
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [user] = useAtom(userAtom);
+  const { t } = useTranslation();
   const [lovePoints, setLovePoints] = useState(520);
   const heartScale = React.useRef(new Animated.Value(1)).current;
 
@@ -66,6 +68,10 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('Profile');
   };
 
+  const handleSettingsPress = () => {
+    navigation.navigate('Settings');
+  };
+
   return (
     <View style={styles.container}>
       {/* 顶部渐变区域 */}
@@ -77,13 +83,13 @@ export const HomeScreen: React.FC = () => {
       >
         <View style={styles.headerContent}>
           <View style={styles.userSection}>
-            <Text style={styles.greeting}>Hi，{user?.username || '宝贝'}</Text>
+            <Text style={styles.greeting}>{t('home.greeting', { name: user?.username || t('home.defaultName') })}</Text>
             <Text style={styles.membershipBadge}>
               {user?.membershipType === 'vip'
-                ? 'VIP会员'
+                ? t('home.vipMember')
                 : user?.membershipType === 'premium'
-                ? '高级会员'
-                : '免费会员'}
+                ? t('home.premiumMember')
+                : t('home.freeMember')}
             </Text>
           </View>
 
@@ -96,6 +102,13 @@ export const HomeScreen: React.FC = () => {
             >
               <Text style={styles.lovePoints}>❤️ {lovePoints}</Text>
             </Animated.View>
+
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={handleSettingsPress}
+            >
+              <Feather name="settings" size={22} color={COLORS.textLight} />
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.avatarButton}
@@ -192,6 +205,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: COLORS.textLight,
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatarButton: {
     width: 44,

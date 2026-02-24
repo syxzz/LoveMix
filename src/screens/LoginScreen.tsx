@@ -1,8 +1,9 @@
 /**
- * LoginScreen - 登录页面
+ * LoginScreen - 现代化登录页面
+ * 包含动画效果、渐变背景、浮动粒子等特效
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,11 +14,14 @@ import {
   Platform,
   Alert,
   ScrollView,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSetAtom } from 'jotai';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { GradientButton } from '../components/GradientButton';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
@@ -25,21 +29,136 @@ import { login } from '../services/auth';
 import { userAtom, isAuthenticatedAtom } from '../store';
 import { Feather } from '@expo/vector-icons';
 
+const { width, height } = Dimensions.get('window');
+
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+
+// 浮动粒子组件
+const FloatingParticle: React.FC<{ delay: number }> = ({ delay }) => {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animate = () => {
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.delay(delay),
+            Animated.timing(opacity, {
+              toValue: 0.6,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(translateY, {
+              toValue: -height,
+              duration: 8000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateY, {
+              toValue: 0,
+              duration: 0,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(translateX, {
+              toValue: Math.random() * 100 - 50,
+              duration: 4000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: 0,
+              duration: 4000,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    };
+
+    animate();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.particle,
+        {
+          left: Math.random() * width,
+          top: height + Math.random() * 100,
+          transform: [{ translateY }, { translateX }],
+          opacity,
+        },
+      ]}
+    />
+  );
+};
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const setUser = useSetAtom(userAtom);
   const setIsAuthenticated = useSetAtom(isAuthenticatedAtom);
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // 动画值
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // 入场动画
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Logo 旋转动画
+    Animated.loop(
+      Animated.timing(logoRotate, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const spin = logoRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('提示', '请输入邮箱和密码');
+      Alert.alert(t('login.alert.title'), t('login.alert.fillEmailPassword'));
       return;
     }
 
@@ -53,7 +172,7 @@ export const LoginScreen: React.FC = () => {
         routes: [{ name: 'Home' }],
       });
     } catch (error: any) {
-      Alert.alert('登录失败', error.message || '请稍后重试');
+      Alert.alert(t('login.alert.loginFailed'), error.message || t('login.alert.tryAgain'));
     } finally {
       setLoading(false);
     }
@@ -64,40 +183,88 @@ export const LoginScreen: React.FC = () => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* 渐变背景 */}
       <LinearGradient
-        colors={[COLORS.primary, COLORS.secondary]}
+        colors={['#FF6B9D', '#FFA07A', '#FFB6C1']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* 浮动粒子 */}
+      {[...Array(15)].map((_, i) => (
+        <FloatingParticle key={i} delay={i * 500} />
+      ))}
+
+      {/* 返回按钮 */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="arrow-left" size={24} color={COLORS.textLight} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>登录</Text>
-        <View style={styles.placeholder} />
-      </LinearGradient>
+        <View style={styles.backButtonInner}>
+          <Feather name="arrow-left" size={24} color="#FFFFFF" />
+        </View>
+      </TouchableOpacity>
 
       <ScrollView
-        style={styles.content}
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.formCard}>
-          <Text style={styles.welcomeText}>欢迎回来</Text>
-          <Text style={styles.subtitle}>登录继续使用 LoveMix</Text>
+        {/* Logo 区域 */}
+        <Animated.View
+          style={[
+            styles.logoContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.logoCircle,
+              { transform: [{ rotate: spin }] },
+            ]}
+          >
+            <LinearGradient
+              colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
+              style={styles.logoGradient}
+            />
+          </Animated.View>
+          <View style={styles.logoInner}>
+            <Text style={styles.logoEmoji}>💕</Text>
+          </View>
+          <Text style={styles.logoText}>LoveMix</Text>
+          <Text style={styles.logoSubtext}>{t('login.logoSubtext')}</Text>
+        </Animated.View>
+
+        {/* 表单卡片 */}
+        <Animated.View
+          style={[
+            styles.formCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <View style={styles.cardHeader}>
+            <Text style={styles.welcomeText}>{t('login.welcomeBack')}</Text>
+            <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
+          </View>
 
           {/* 邮箱输入 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>邮箱</Text>
-            <View style={styles.inputContainer}>
-              <Feather name="mail" size={20} color={COLORS.textGray} />
+            <View style={styles.inputWrapper}>
+              <View style={styles.iconContainer}>
+                <Feather name="mail" size={20} color={COLORS.primary} />
+              </View>
               <TextInput
                 style={styles.input}
-                placeholder="请输入邮箱"
-                placeholderTextColor={COLORS.textGray}
+                placeholder={t('login.emailPlaceholder')}
+                placeholderTextColor="rgba(0,0,0,0.4)"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -109,23 +276,27 @@ export const LoginScreen: React.FC = () => {
 
           {/* 密码输入 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>密码</Text>
-            <View style={styles.inputContainer}>
-              <Feather name="lock" size={20} color={COLORS.textGray} />
+            <View style={styles.inputWrapper}>
+              <View style={styles.iconContainer}>
+                <Feather name="lock" size={20} color={COLORS.primary} />
+              </View>
               <TextInput
                 style={styles.input}
-                placeholder="请输入密码"
-                placeholderTextColor={COLORS.textGray}
+                placeholder={t('login.passwordPlaceholder')}
+                placeholderTextColor="rgba(0,0,0,0.4)"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
                 <Feather
                   name={showPassword ? 'eye' : 'eye-off'}
                   size={20}
-                  color={COLORS.textGray}
+                  color="rgba(0,0,0,0.4)"
                 />
               </TouchableOpacity>
             </View>
@@ -133,28 +304,54 @@ export const LoginScreen: React.FC = () => {
 
           {/* 忘记密码 */}
           <TouchableOpacity
+            style={styles.forgotPasswordButton}
             onPress={() => navigation.navigate('ForgotPassword')}
           >
-            <Text style={styles.forgotPassword}>忘记密码？</Text>
+            <Text style={styles.forgotPasswordText}>{t('login.forgotPassword')}</Text>
           </TouchableOpacity>
 
           {/* 登录按钮 */}
-          <View style={styles.buttonSection}>
+          <View style={styles.buttonContainer}>
             <GradientButton
-              title="登录"
+              title={loading ? t('login.loggingIn') : t('login.loginButton')}
               onPress={handleLogin}
               loading={loading}
               disabled={loading}
             />
           </View>
 
-          {/* 注册链接 */}
-          <View style={styles.registerSection}>
-            <Text style={styles.registerText}>还没有账号？</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerLink}>立即注册</Text>
+          {/* 分隔线 */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t('login.or')}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* 社交登录按钮 */}
+          <View style={styles.socialButtons}>
+            <TouchableOpacity style={styles.socialButton}>
+              <Feather name="github" size={24} color="#333" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton}>
+              <Feather name="mail" size={24} color="#EA4335" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton}>
+              <Feather name="facebook" size={24} color="#1877F2" />
             </TouchableOpacity>
           </View>
+
+          {/* 注册链接 */}
+          <View style={styles.registerSection}>
+            <Text style={styles.registerText}>{t('login.noAccount')}</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.registerLink}>{t('login.registerNow')}</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* 底部装饰 */}
+        <View style={styles.bottomDecoration}>
+          <Text style={styles.bottomText}>© 2024 LoveMix. All rights reserved.</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -164,45 +361,94 @@ export const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
-  header: {
-    height: 120,
-    paddingTop: 50,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.textLight,
-  },
-  placeholder: {
-    width: 40,
-  },
-  content: {
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: SPACING.lg,
+    flexGrow: 1,
+    paddingTop: 80,
+    paddingBottom: 40,
+  },
+  particle: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
+  },
+  backButtonInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    position: 'absolute',
+  },
+  logoGradient: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+  logoInner: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  logoEmoji: {
+    fontSize: 50,
+  },
+  logoText: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 20,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  logoSubtext: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 8,
   },
   formCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: RADIUS.large,
-    padding: SPACING.xl,
+    marginHorizontal: 20,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 30,
+    padding: 30,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 15,
+  },
+  cardHeader: {
+    marginBottom: 30,
   },
   welcomeText: {
     fontSize: 28,
@@ -211,43 +457,77 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textGray,
-    marginBottom: SPACING.xl,
   },
   inputGroup: {
-    marginBottom: SPACING.lg,
+    marginBottom: 20,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    marginBottom: SPACING.sm,
-  },
-  inputContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.medium,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 14,
-    gap: SPACING.sm,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 56,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,107,157,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
     color: COLORS.textDark,
   },
-  forgotPassword: {
+  eyeButton: {
+    padding: 8,
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+  },
+  forgotPasswordText: {
     fontSize: 14,
     color: COLORS.primary,
-    textAlign: 'right',
-    marginBottom: SPACING.xl,
+    fontWeight: '600',
   },
-  buttonSection: {
-    marginBottom: SPACING.lg,
+  buttonContainer: {
+    marginBottom: 24,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: COLORS.textGray,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  socialButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   registerSection: {
     flexDirection: 'row',
@@ -263,5 +543,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  bottomDecoration: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
+  bottomText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
   },
 });
