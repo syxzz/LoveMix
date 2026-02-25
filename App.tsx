@@ -41,6 +41,8 @@ import { COLORS } from './src/utils/constants';
 import { USE_FIREBASE } from './src/config';
 import './src/i18n'; // 初始化 i18n
 import { loadLanguage } from './src/i18n';
+import { initializeAllScriptCovers, preloadCoverCache, initializeScriptCharacterAvatars } from './src/services/scriptInit';
+import { getAllScripts } from './src/data/scripts';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -56,6 +58,9 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // 加载语言设置
     loadLanguage();
 
+    // 后台初始化剧本封面（不阻塞主流程）
+    initializeScriptCovers();
+
     // 如果使用 Firebase，监听认证状态变化
     if (USE_FIREBASE && onAuthStateChanged) {
       const unsubscribe = onAuthStateChanged((user) => {
@@ -66,6 +71,30 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       return () => unsubscribe();
     }
   }, []);
+
+  const initializeScriptCovers = async () => {
+    try {
+      // 先预加载缓存到内存，加快后续访问速度
+      await preloadCoverCache();
+
+      // 后台静默初始化，不阻塞应用启动
+      const scripts = getAllScripts();
+
+      // 初始化封面和角色头像
+      for (const script of scripts) {
+        // 初始化封面
+        initializeAllScriptCovers([script]);
+
+        // 初始化角色头像
+        initializeScriptCharacterAvatars(script);
+
+        // 避免同时发起太多请求
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    } catch (error) {
+      console.error('初始化剧本封面失败:', error);
+    }
+  };
 
   const checkAuth = async () => {
     try {

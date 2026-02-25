@@ -12,6 +12,8 @@ import {
   StyleSheet,
   Alert,
   Animated,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -22,6 +24,7 @@ import { COLORS, SPACING, RADIUS, GAME_PHASES } from '../utils/constants';
 import { getScriptById } from '../data/scripts';
 import { getGameProgress, saveGameProgress } from '../services/storage';
 import { generateIntroduction } from '../services/ai';
+import { ensureIntroductionImage, getCachedIntroImageSync } from '../services/scriptInit';
 import { Feather } from '@expo/vector-icons';
 
 type GameScreenRouteProp = RouteProp<RootStackParamList, 'Game'>;
@@ -41,6 +44,8 @@ export const GameScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isGeneratingIntro, setIsGeneratingIntro] = useState(false); // 是否正在生成开场白
   const [discoveredCluesCount, setDiscoveredCluesCount] = useState(0);
+  const [introImage, setIntroImage] = useState<string | null>(null); // 开场场景图片
+  const [isLoadingIntroImage, setIsLoadingIntroImage] = useState(false);
 
   // 加载动画
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -132,16 +137,20 @@ export const GameScreen: React.FC = () => {
       setCharacter(characterData);
       setLoading(false); // 立即停止加载，显示页面
 
+      // 加载开场场景图片
+      loadIntroImage(scriptData, characterData);
+
       // 检查是否有保存的进度
       const progress = await getGameProgress(scriptId);
-      if (progress && progress.selectedCharacterId === characterId) {
+      if (progress && progress.selectedCharacterId === characterId && progress.currentPhase !== 'intro') {
+        // 恢复进度（非首次进入）
         setCurrentPhase(progress.currentPhase);
         setDiscoveredCluesCount(progress.discoveredClues.length);
-        const restoredIntro = '游戏进度已恢复';
+        const restoredIntro = '🎮 游戏进度已恢复\n\n你之前的游戏进度已经加载完成，可以继续你的推理之旅。';
         setIntroduction(restoredIntro);
         setStreamingIntro(restoredIntro);
       } else {
-        // 生成开场介绍（流式输出）
+        // 首次进入或从开场阶段重新开始 - 生成开场介绍（流式输出）
         setStreamingIntro(''); // 初始化为空，准备接收流式内容
         setIsGeneratingIntro(true); // 开始生成
         try {
@@ -182,6 +191,28 @@ export const GameScreen: React.FC = () => {
       console.error('加载游戏失败:', error);
       Alert.alert(t('common.error'), '加载游戏失败');
       setLoading(false);
+    }
+  };
+
+  const loadIntroImage = async (scriptData: Script, characterData: Character) => {
+    // 优先从内存缓存同步读取
+    const cachedImage = getCachedIntroImageSync(scriptData.id, characterData.id);
+    if (cachedImage) {
+      setIntroImage(cachedImage);
+      return;
+    }
+
+    // 异步生成或加载
+    setIsLoadingIntroImage(true);
+    try {
+      const image = await ensureIntroductionImage(scriptData, characterData);
+      if (image) {
+        setIntroImage(image);
+      }
+    } catch (error) {
+      console.error('加载开场场景图片失败:', error);
+    } finally {
+      setIsLoadingIntroImage(false);
     }
   };
 
@@ -302,6 +333,24 @@ export const GameScreen: React.FC = () => {
         {currentPhase === 'intro' && (
           <View style={styles.introSection}>
             <Text style={styles.introTitle}>📖 {t('game.phases.intro')}</Text>
+
+            {/* 开场场景图片 */}
+            {introImage && (
+              <View style={styles.introImageContainer}>
+                <Image
+                  source={{ uri: introImage }}
+                  style={styles.introImage}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+            {isLoadingIntroImage && !introImage && (
+              <View style={styles.introImagePlaceholder}>
+                <ActivityIndicator size="large" color={COLORS.accent} />
+                <Text style={styles.loadingImageText}>生成场景图片中...</Text>
+              </View>
+            )}
+
             <View style={styles.introCard}>
               {isGeneratingIntro && !streamingIntro ? (
                 // 加载动画
@@ -549,6 +598,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.textDark,
     marginBottom: SPACING.md,
+  },
+  introImageContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: RADIUS.medium,
+    overflow: 'hidden',
+    marginBottom: SPACING.md,
+  },
+  introImage: {
+    width: '100%',
+    height: '100%',
+  },
+  introImagePlaceholder: {
+    width: '100%',
+    height: 200,
+    borderRadius: RADIUS.medium,
+    backgroundColor: COLORS.cardBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  loadingImageText: {
+    marginTop: SPACING.sm,
+    fontSize: 14,
+    color: COLORS.accent,
   },
   introCard: {
     backgroundColor: COLORS.cardBg,

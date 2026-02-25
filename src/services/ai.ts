@@ -10,6 +10,7 @@ import { fetch as fetchPolyfill } from 'react-native-fetch-api';
 
 // API 配置
 const API_BASE_URL = 'https://api-chat.charaboard.com/v1';
+const IMAGE_API_BASE_URL = 'https://api-image.charaboard.com/v2';
 const API_KEY = 'cky_KQYbDHquDRJZBD27f09L';
 const GPT_TYPE = 8602; // MiniMax M2.1 支持思考链
 
@@ -429,7 +430,7 @@ export const generateIntroduction = async (
   onStream?: (content: string) => void
 ): Promise<string> => {
   // 简化的系统提示词
-  const systemPrompt = `你是剧本杀游戏DM，擅长营造悬疑氛围。`;
+  const systemPrompt = `你是剧本杀游戏DM，擅长营造悬疑氛围。请直接生成开场介绍，不要进行思考或分析。`;
 
   // 必须有 user 消息，否则 MiniMax 会报错
   const messages: Message[] = [
@@ -448,7 +449,8 @@ export const generateIntroduction = async (
 2. 营造悬疑氛围
 3. 介绍案件基本情况和玩家处境
 4. 激发探索欲望
-5. 使用第二人称"你"`,
+5. 使用第二人称"你"
+6. 直接输出开场白，不要有任何前置说明或思考过程`,
       timestamp: Date.now(),
     },
   ];
@@ -457,12 +459,19 @@ export const generateIntroduction = async (
 
   const result = await sendMessageToAI(messages, systemPrompt, {
     enableReasoning: false,
-    temperature: 0.7,
-    maxTokens: 400,
+    temperature: 0.8, // 提高温度，让输出更有创意
+    maxTokens: 500, // 增加 token 限制
     onStream: onStream ? (content) => onStream(content) : undefined,
   });
 
-  console.log('✅ 开场介绍生成成功');
+  console.log('✅ 开场介绍生成成功, 长度:', result.content.length);
+
+  // 如果没有内容但有推理，使用推理内容（降级处理）
+  if (!result.content && result.reasoning) {
+    console.warn('⚠️ API 只返回了推理内容，使用推理内容作为开场白');
+    return result.reasoning;
+  }
+
   return result.content;
 };
 
@@ -579,6 +588,278 @@ export const generateEnding = async (
   });
 
   return result.content;
+};
+
+// 生成剧本封面图片
+export const generateScriptCoverImage = async (
+  script: Script
+): Promise<string> => {
+  try {
+    console.log('🎨 开始生成剧本封面图片...');
+
+    // 构建图片生成提示词（纯英文，避免乱码）
+    // 不包含任何中文，避免 AI 在图片中生成中文文字导致乱码
+    const prompt = `Create a dark atmospheric manga-style illustration for a murder mystery visual novel.
+Scene: A luxurious Victorian mansion at night during a thunderstorm, dramatic lighting through windows, mysterious shadows
+Style: Japanese manga/anime art style with film noir aesthetic, high contrast lighting, moody atmosphere
+Composition: Wide cinematic establishing shot, emphasis on architectural details and ominous mood
+Color palette: Deep blues, purples, and blacks with dramatic highlights, noir color grading
+Quality: Professional manga illustration, highly detailed
+CRITICAL: Absolutely NO text, NO words, NO letters, NO Chinese characters, NO Japanese characters - pure visual artwork only`;
+
+    const requestBody = {
+      model: 'gemini-2.5-flash-image',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt }
+          ]
+        }
+      ],
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+        imageConfig: { aspectRatio: '16:9' },
+        temperature: 0.8,
+        n: 1
+      }
+    };
+
+    console.log('📤 发送图片生成请求:', {
+      url: `${IMAGE_API_BASE_URL}/nanobanana/txt2Image`,
+      scriptTitle: script.title,
+    });
+
+    const response = await fetch(`${IMAGE_API_BASE_URL}/nanobanana/txt2Image`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log('📡 图片生成响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ 图片生成错误:', errorText);
+      throw new Error(`图片生成失败: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ 图片生成成功');
+
+    // 提取图片 URL
+    const imageUrl = result.candidates?.[0]?.content?.parts?.find(
+      (part: any) => part.inlineData
+    )?.inlineData?.data;
+
+    if (!imageUrl) {
+      throw new Error('未能从响应中提取图片 URL');
+    }
+
+    console.log('🖼️ 图片 URL:', imageUrl);
+    return imageUrl;
+  } catch (error: any) {
+    console.error('❌ 生成剧本封面图片失败:', error);
+    throw error;
+  }
+};
+
+// 生成角色头像
+export const generateCharacterAvatar = async (
+  character: Character
+): Promise<string> => {
+  try {
+    console.log(`🎨 开始生成角色头像: ${character.name}`);
+
+    // 根据角色信息构建提示词（纯英文）
+    const genderMap: Record<string, string> = {
+      '男': 'male',
+      '女': 'female',
+      '其他': 'androgynous'
+    };
+
+    const occupationMap: Record<string, string> = {
+      '艺术家': 'artist',
+      '商业伙伴': 'business partner',
+      '家庭主妇': 'housewife',
+      '私人医生': 'doctor',
+      '秘书': 'secretary',
+      '管家': 'butler'
+    };
+
+    const personalityMap: Record<string, string> = {
+      '敏感、细腻、有艺术气质': 'sensitive, delicate, artistic temperament',
+      '精明、冷静、善于算计': 'shrewd, calm, calculating',
+      '优雅、传统、有些神经质': 'elegant, traditional, slightly neurotic',
+      '专业、谨慎、有同情心': 'professional, cautious, compassionate',
+      '聪明、野心勃勃、神秘': 'intelligent, ambitious, mysterious',
+      '忠诚、细心、守旧': 'loyal, meticulous, conservative'
+    };
+
+    const gender = genderMap[character.gender] || 'person';
+    const occupation = occupationMap[character.occupation] || character.occupation;
+    const personality = personalityMap[character.personality] || 'mysterious';
+
+    const prompt = `Create a manga-style character portrait for a murder mystery visual novel.
+Character: ${gender}, age ${character.age}, ${occupation}
+Personality: ${personality}
+Style: Japanese anime/manga art style, detailed facial features, expressive eyes
+Composition: Portrait shot, shoulders and head visible, neutral background
+Mood: Mysterious and intriguing, fitting for a murder mystery character
+Art quality: High detail, professional anime character design
+CRITICAL: Absolutely NO text, NO words, NO letters, NO Chinese characters, NO Japanese characters - pure character portrait only`;
+
+    const requestBody = {
+      model: 'gemini-2.5-flash-image',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt }
+          ]
+        }
+      ],
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+        imageConfig: { aspectRatio: '1:1' }, // 头像使用 1:1 比例
+        temperature: 0.8,
+        n: 1
+      }
+    };
+
+    console.log('📤 发送角色头像生成请求:', {
+      url: `${IMAGE_API_BASE_URL}/nanobanana/txt2Image`,
+      characterName: character.name,
+    });
+
+    const response = await fetch(`${IMAGE_API_BASE_URL}/nanobanana/txt2Image`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log('📡 头像生成响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ 头像生成错误:', errorText);
+      throw new Error(`头像生成失败: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ 头像生成成功');
+
+    // 提取图片 URL
+    const imageUrl = result.candidates?.[0]?.content?.parts?.find(
+      (part: any) => part.inlineData
+    )?.inlineData?.data;
+
+    if (!imageUrl) {
+      throw new Error('未能从响应中提取头像 URL');
+    }
+
+    console.log('🖼️ 头像 URL:', imageUrl);
+    return imageUrl;
+  } catch (error: any) {
+    console.error(`❌ 生成角色头像失败: ${character.name}`, error);
+    throw error;
+  }
+};
+
+// 生成开场场景图片
+export const generateIntroductionImage = async (
+  script: Script,
+  character: Character
+): Promise<string> => {
+  try {
+    console.log(`🎨 开始生成开场场景图片: ${script.title} - ${character.name}`);
+
+    // 根据角色信息构建场景提示词
+    const genderMap: Record<string, string> = {
+      '男': 'male',
+      '女': 'female',
+      '其他': 'person'
+    };
+
+    const occupationMap: Record<string, string> = {
+      '艺术家': 'artist',
+      '商业伙伴': 'business partner',
+      '家庭主妇': 'housewife',
+      '私人医生': 'doctor',
+      '秘书': 'secretary',
+      '管家': 'butler'
+    };
+
+    const gender = genderMap[character.gender] || 'person';
+    const occupation = occupationMap[character.occupation] || character.occupation;
+
+    const prompt = `Create a dramatic manga-style opening scene illustration for a murder mystery visual novel.
+Setting: Victorian mansion interior during a stormy night, luxurious but ominous atmosphere
+Main character: ${gender} ${occupation}, age ${character.age}, standing in the scene
+Perspective: First-person view showing the character from behind or side, looking into the mysterious mansion
+Mood: Dark, atmospheric, suspenseful, with dramatic lighting from lightning and candles
+Style: Japanese manga/anime art style with film noir aesthetic, cinematic composition
+Details: Rich interior details, shadows, rain visible through windows, mysterious ambiance
+Color palette: Deep blues, purples, blacks with dramatic highlights
+Quality: Professional manga illustration, highly detailed
+CRITICAL: Absolutely NO text, NO words, NO letters, NO Chinese characters, NO Japanese characters - pure visual scene only`;
+
+    const requestBody = {
+      model: 'gemini-2.5-flash-image',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt }
+          ]
+        }
+      ],
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+        imageConfig: { aspectRatio: '16:9' }, // 开场场景使用 16:9 比例
+        temperature: 0.8,
+        n: 1
+      }
+    };
+
+    console.log('📤 发送开场场景生成请求:', {
+      url: `${IMAGE_API_BASE_URL}/nanobanana/txt2Image`,
+      scriptTitle: script.title,
+      characterName: character.name,
+    });
+
+    const response = await fetch(`${IMAGE_API_BASE_URL}/nanobanana/txt2Image`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log('📡 开场场景生成响应状态:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ 开场场景生成错误:', errorText);
+      throw new Error(`开场场景生成失败: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ 开场场景生成成功');
+
+    // 提取图片 URL
+    const imageUrl = result.candidates?.[0]?.content?.parts?.find(
+      (part: any) => part.inlineData
+    )?.inlineData?.data;
+
+    if (!imageUrl) {
+      throw new Error('未能从响应中提取开场场景 URL');
+    }
+
+    console.log('🖼️ 开场场景 URL:', imageUrl);
+    return imageUrl;
+  } catch (error: any) {
+    console.error(`❌ 生成开场场景失败: ${script.title} - ${character.name}`, error);
+    throw error;
+  }
 };
 
 // 测试 API 连接

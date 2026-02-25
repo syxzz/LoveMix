@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -19,6 +21,7 @@ import { RootStackParamList, Script, Character } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { getScriptById } from '../data/scripts';
 import { getGameProgress } from '../services/storage';
+import { ensureScriptCover, getCachedCoverSync, ensureCharacterAvatar, getCachedAvatarSync } from '../services/scriptInit';
 import { Feather } from '@expo/vector-icons';
 
 type ScriptDetailScreenRouteProp = RouteProp<RootStackParamList, 'ScriptDetail'>;
@@ -33,6 +36,10 @@ export const ScriptDetailScreen: React.FC = () => {
   const [script, setScript] = useState<Script | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [hasProgress, setHasProgress] = useState(false);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [isLoadingCover, setIsLoadingCover] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadScript();
@@ -43,6 +50,24 @@ export const ScriptDetailScreen: React.FC = () => {
     if (scriptData) {
       setScript(scriptData);
 
+      // 优先级1: 预设封面，立即显示
+      if (scriptData.coverImage) {
+        setCoverImage(scriptData.coverImage);
+      } else {
+        // 优先级2: 从内存缓存同步读取（零延迟）
+        const cachedCover = getCachedCoverSync(scriptData.id);
+        if (cachedCover) {
+          setCoverImage(cachedCover);
+          setImageLoading(false); // 缓存的图片，标记为已加载
+        } else {
+          // 优先级3: 异步生成（首次访问）
+          loadCover(scriptData);
+        }
+      }
+
+      // 加载角色头像
+      loadCharacterAvatars(scriptData.characters);
+
       // 检查是否有进度
       const progress = await getGameProgress(scriptId);
       if (progress) {
@@ -52,6 +77,56 @@ export const ScriptDetailScreen: React.FC = () => {
           setSelectedCharacter(savedCharacter);
         }
       }
+    }
+  };
+
+  const loadCharacterAvatars = (characters: Character[]) => {
+    const avatars: Record<string, string> = {};
+
+    characters.forEach(character => {
+      // 优先使用预设头像
+      if (character.avatar) {
+        avatars[character.id] = character.avatar;
+      } else {
+        // 从内存缓存同步读取
+        const cachedAvatar = getCachedAvatarSync(character.id);
+        if (cachedAvatar) {
+          avatars[character.id] = cachedAvatar;
+        } else {
+          // 异步生成头像
+          loadCharacterAvatar(character);
+        }
+      }
+    });
+
+    setCharacterAvatars(avatars);
+  };
+
+  const loadCharacterAvatar = async (character: Character) => {
+    try {
+      const avatar = await ensureCharacterAvatar(character);
+      if (avatar) {
+        setCharacterAvatars(prev => ({
+          ...prev,
+          [character.id]: avatar
+        }));
+      }
+    } catch (error) {
+      console.error(`加载角色头像失败: ${character.name}`, error);
+    }
+  };
+
+  const loadCover = async (scriptData: Script) => {
+    setIsLoadingCover(true);
+    try {
+      const cover = await ensureScriptCover(scriptData);
+      if (cover) {
+        setCoverImage(cover);
+      }
+    } catch (error) {
+      console.error('加载封面失败:', error);
+    } finally {
+      setIsLoadingCover(false);
     }
   };
 
@@ -105,6 +180,37 @@ export const ScriptDetailScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* 封面图片 */}
+        <View style={styles.coverSection}>
+          {isLoadingCover ? (
+            <View style={styles.coverPlaceholder}>
+              <ActivityIndicator size="large" color={COLORS.accent} />
+              <Text style={styles.loadingText}>生成封面中...</Text>
+            </View>
+          ) : coverImage ? (
+            <>
+              {imageLoading && (
+                <View style={[styles.coverPlaceholder, { position: 'absolute', zIndex: 1 }]}>
+                  <ActivityIndicator size="large" color={COLORS.accent} />
+                </View>
+              )}
+              <Image
+                source={{ uri: coverImage }}
+                style={styles.coverImage}
+                resizeMode="cover"
+                onLoadStart={() => setImageLoading(true)}
+                onLoadEnd={() => setImageLoading(false)}
+                onError={() => setImageLoading(false)}
+              />
+            </>
+          ) : (
+            <View style={styles.coverPlaceholder}>
+              <Feather name="image" size={48} color={COLORS.textGray} />
+              <Text style={styles.placeholderText}>暂无封面</Text>
+            </View>
+          )}
+        </View>
+
         {/* 剧本标题 */}
         <View style={styles.titleSection}>
           <Text style={styles.scriptTitle}>{script.title}</Text>
@@ -122,38 +228,57 @@ export const ScriptDetailScreen: React.FC = () => {
         {/* 角色选择 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('scriptDetail.selectCharacter')}</Text>
-          {script.characters.map((character) => (
-            <TouchableOpacity
-              key={character.id}
-              style={[
-                styles.characterCard,
-                selectedCharacter?.id === character.id && styles.characterCardSelected,
-              ]}
-              onPress={() => handleCharacterSelect(character)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.characterHeader}>
-                <View style={styles.characterInfo}>
-                  <Text style={styles.characterName}>{character.name}</Text>
-                  <Text style={styles.characterMeta}>
-                    {character.age}{t('scriptDetail.age')} · {character.gender} · {character.occupation}
-                  </Text>
-                </View>
-                {selectedCharacter?.id === character.id && (
-                  <View style={styles.selectedBadge}>
-                    <Feather name="check" size={18} color={COLORS.textLight} />
-                  </View>
-                )}
-              </View>
+          {script.characters.map((character) => {
+            const avatar = characterAvatars[character.id];
 
-              <Text style={styles.characterPersonality}>
-                {t('scriptDetail.personality')}: {character.personality}
-              </Text>
-              <Text style={styles.characterBackground} numberOfLines={3}>
-                {character.background}
-              </Text>
-            </TouchableOpacity>
-          ))}
+            return (
+              <TouchableOpacity
+                key={character.id}
+                style={[
+                  styles.characterCard,
+                  selectedCharacter?.id === character.id && styles.characterCardSelected,
+                ]}
+                onPress={() => handleCharacterSelect(character)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.characterHeader}>
+                  {/* 角色头像 */}
+                  <View style={styles.avatarContainer}>
+                    {avatar ? (
+                      <Image
+                        source={{ uri: avatar }}
+                        style={styles.avatar}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.avatarPlaceholder}>
+                        <Feather name="user" size={32} color={COLORS.textGray} />
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.characterInfo}>
+                    <Text style={styles.characterName}>{character.name}</Text>
+                    <Text style={styles.characterMeta}>
+                      {character.age}{t('scriptDetail.age')} · {character.gender} · {character.occupation}
+                    </Text>
+                  </View>
+                  {selectedCharacter?.id === character.id && (
+                    <View style={styles.selectedBadge}>
+                      <Feather name="check" size={18} color={COLORS.textLight} />
+                    </View>
+                  )}
+                </View>
+
+                <Text style={styles.characterPersonality}>
+                  {t('scriptDetail.personality')}: {character.personality}
+                </Text>
+                <Text style={styles.characterBackground} numberOfLines={3}>
+                  {character.background}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* 开始按钮 */}
@@ -212,11 +337,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xl,
+  },
+  coverSection: {
+    width: '100%',
+    height: 220,
+    backgroundColor: COLORS.cardBg,
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  coverPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBg,
+  },
+  loadingText: {
+    marginTop: SPACING.md,
+    fontSize: 14,
+    color: COLORS.accent,
+  },
+  placeholderText: {
+    marginTop: SPACING.sm,
+    fontSize: 14,
+    color: COLORS.textGray,
   },
   titleSection: {
-    marginBottom: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
   scriptTitle: {
     fontSize: 28,
@@ -266,6 +418,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: SPACING.sm,
+  },
+  avatarContainer: {
+    marginRight: SPACING.md,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.cardBg,
+  },
+  avatarPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.cardBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   characterInfo: {
     flex: 1,

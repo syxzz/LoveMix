@@ -188,3 +188,20 @@ export const getScriptById = (id: string): Script | undefined => {
 export const getAllScripts = (): Script[] => {
   return SAMPLE_SCRIPTS;
 };
+
+// 获取剧本（包含动态生成的封面）
+export const getScriptByIdWithCover = async (id: string): Promise<Script | undefined> => {
+  const script = getScriptById(id);
+  if (!script) return undefined;
+
+  // 如果没有预设封面，尝试从缓存或生成
+  if (!script.coverImage) {
+    const { getCachedCover } = await import('../services/scriptInit');
+    const cachedCover = await getCachedCover(script.id);
+    if (cachedCover) {
+      return { ...script, coverImage: cachedCover };
+    }
+  }
+
+  return script;
+};
