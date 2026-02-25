@@ -1,103 +1,377 @@
-# LoveMix - 情侣AI创意App 💑
+# 🎭 LoveMix - AI 驱动的剧本杀游戏平台
 
-LoveMix 是一款专为情侣打造的商业化AI创意应用，使用 React Native 和 Expo 开发。提供完整的用户系统、会员订阅、AI头像融合、纪念日卡片、虚拟约会场景和表情包生成等温馨浪漫的功能。
+<div align="center">
 
-## 🎉 商业化升级
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![React Native](https://img.shields.io/badge/React%20Native-0.81.5-61dafb.svg)
+![Expo](https://img.shields.io/badge/Expo-~54.0-000020.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-3178c6.svg)
 
-LoveMix 已完成商业化升级，新增以下核心功能:
+一个创新的剧本杀游戏平台，结合 AI 技术提供沉浸式的推理体验
 
-- ✅ **用户认证系统**: 注册、登录、密码重置
-- ✅ **个人资料管理**: 头像、昵称、会员等级、使用统计
-- ✅ **会员订阅体系**: 免费版、高级会员(¥19.9/月)、VIP会员(¥99/年)
-- ✅ **作品历史记录**: 所有生成作品的历史管理
-- ✅ **社区作品广场**: 浏览和分享用户作品
-- ✅ **使用次数限制**: 基于会员等级的功能限制
-- ✅ **优化的UI/UX**: 引导页、空状态、流畅动画
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [技术栈](#-技术栈) • [项目结构](#-项目结构) • [API 配置](#-api-配置)
 
-详细升级说明请查看 [UPGRADE_GUIDE.md](UPGRADE_GUIDE.md)
+</div>
 
-## ✨ 主要功能
+---
 
-### 1. 💑 AI头像融合
-- 上传两张照片，生成未来宝宝或情侣头像
-- 支持两种模式：未来宝宝 / 情侣头像
-- AI智能融合面部特征
+## ✨ 功能特性
 
-### 2. 🎂 纪念日卡片
-- 定制专属祝福卡片
-- 填写纪念日名称、日期和双方昵称
-- 三种风格可选：浪漫 / 幽默 / 文艺
-- 自动生成精美祝福文案
+### 🎮 核心游戏功能
 
-### 3. 🌅 虚拟约会场景
-- 生成"如果我们在一起"的虚拟约会照片
-- 6个浪漫场景：海边日落、浪漫咖啡馆、星空露营、未来之家、樱花树下、沙滩漫步
-- 4种画面风格：写实、动漫、水彩、油画
+- **AI 开场白生成** - 根据剧本和角色自动生成专属开场介绍
+- **智能 DM 系统** - AI 主持人引导游戏进程，回答玩家问题
+- **角色对话系统** - 与 NPC 角色进行智能对话，获取线索
+- **线索搜集** - 探索场景，发现关键线索
+- **推理投票** - 分析线索，投票选出真凶
+- **结局揭晓** - 查看完整真相和推理评价
 
-### 4. 😊 表情包工坊
-- 将聊天内容转换为表情包
-- 快捷标签：想你、晚安、抱抱、生气、亲亲
-- 三种风格：可爱卡通、搞怪、萌宠
-- 一次生成4个表情包
+### 🤖 AI 增强功能
 
-## 🎨 设计特色
+- **流式输出** - 实时显示 AI 生成内容，提供打字机效果
+- **思考链可视化** - 可选展示 AI 推理过程（支持开关）
+- **自动降级** - AI 请求失败时自动切换到普通模式
+- **加载动画** - 优雅的等待动画，提升用户体验
 
-- **配色方案**：热情粉 (#FF69B4) + 天空蓝 (#87CEEB)
-- **渐变效果**：45度线性渐变，营造浪漫氛围
-- **圆角设计**：12px - 32px 多层次圆角
-- **动画效果**：心跳加载动画、按钮按压动画、页面淡入淡出
-- **字体系统**：Poppins 字体家族（Bold/SemiBold/Regular/Light）
+### 🌍 多语言支持
 
-## 📦 技术栈
+- 中文（简体）
+- 英文
+- 日文
+- 动态语言切换
 
-- **框架**: React Native + Expo SDK 54
-- **语言**: TypeScript
-- **导航**: React Navigation (Native Stack)
-- **状态管理**: Jotai
-- **样式**: NativeWind (Tailwind CSS for React Native)
-- **动画**: React Native Reanimated
-- **手势**: React Native Gesture Handler
-- **图片处理**: Expo Image Picker, Expo Media Library
-- **存储**: AsyncStorage (普通数据), Expo Secure Store (API密钥)
-- **API调用**: Axios
-- **认证**: 本地认证系统(可扩展为后端API)
+### 🎨 精美 UI/UX
 
-## 🏗️ 商业化架构
+- **渐变设计** - 紫色到金色的优雅渐变
+- **流畅动画** - 基于 Animated API 的原生动画
+- **响应式布局** - 适配各种屏幕尺寸
+- **暗色主题** - 沉浸式的游戏氛围
 
-### 用户系统
-- 邮箱注册/登录
-- 密码加密存储
-- Token认证机制
-- 个人资料管理
-
-### 会员体系
-- **免费版**: 每日3次生成,基础功能
-- **高级会员**: ¥19.9/月,每日20次,全功能解锁
-- **VIP会员**: ¥99/年,无限次生成,专属特权
-
-### 数据管理
-- 作品历史记录
-- 使用统计追踪
-- 云端同步准备(架构已就绪)
-
-### 社区功能
-- 作品分享广场
-- 点赞和浏览统计
-- 用户互动
+---
 
 ## 🚀 快速开始
 
 ### 前置要求
 
-- Node.js 20.13.1 或更高版本
+- Node.js 20.13.1+
 - npm 或 yarn
 - Expo CLI
-- iOS 模拟器 (Mac) 或 Android 模拟器 或 实体设备
+- iOS 模拟器或 Android 模拟器（可选）
 
 ### 安装步骤
 
-1. **克隆项目**
 ```bash
+# 1. 克隆项目
+git clone <repository-url>
+cd LoveMix
+
+# 2. 安装依赖
+npm install
+
+# 3. 启动开发服务器
+npm start
+
+# 4. 运行应用
+# iOS: 按 'i' 或运行 npm run ios
+# Android: 按 'a' 或运行 npm run android
+# Web: 按 'w' 或运行 npm run web
+```
+
+### 首次运行
+
+1. 应用启动后会显示欢迎页面
+2. 可以选择登录或跳过登录
+3. 进入首页查看可用剧本
+4. 选择剧本和角色开始游戏
+
+---
+
+## 🛠 技术栈
+
+### 核心框架
+
+- **React Native** `0.81.5` - 跨平台移动应用框架
+- **Expo** `~54.0` - React Native 开发工具链
+- **TypeScript** `5.9.2` - 类型安全的 JavaScript
+
+### 导航和状态管理
+
+- **React Navigation** `7.x` - 导航库
+  - Native Stack Navigator - 原生导航体验
+- **Jotai** `2.17.1` - 原子化状态管理
+- **AsyncStorage** - 本地数据持久化
+
+### UI 和样式
+
+- **Expo Linear Gradient** - 渐变效果
+- **React Native Animated** - 原生动画
+- **Vector Icons** - 图标库
+
+### 国际化
+
+- **i18next** `25.8.13` - 国际化框架
+- **react-i18next** `16.5.4` - React 集成
+
+### AI 集成
+
+- **react-native-fetch-api** `3.0.0` - 支持流式响应的 Fetch API
+- **CharaBoard API** - AI 对话服务（MiniMax M2.1）
+
+### 其他工具
+
+- **Firebase** `12.9.0` - 用户认证和数据存储
+- **Axios** `1.13.5` - HTTP 客户端
+- **Expo Secure Store** - 加密存储
+
+---
+
+## 📁 项目结构
+
+```
+LoveMix/
+├── src/
+│   ├── components/          # 可复用组件
+│   │   ├── GradientButton.tsx
+│   │   ├── ImageUploader.tsx
+│   │   ├── LanguageSelector.tsx
+│   │   ├── LoadingHeart.tsx
+│   │   ├── ResultCard.tsx
+│   │   ├── SceneSelector.tsx
+│   │   └── TabBar.tsx
+│   │
+│   ├── screens/             # 页面组件
+│   │   ├── WelcomeScreen.tsx      # 欢迎页
+│   │   ├── LoginScreen.tsx        # 登录页
+│   │   ├── RegisterScreen.tsx     # 注册页
+│   │   ├── HomeScreen.tsx         # 首页（剧本列表）
+│   │   ├── ScriptDetailScreen.tsx # 剧本详情
+│   │   ├── GameScreen.tsx         # 游戏主界面
+│   │   ├── DialogScreen.tsx       # 对话系统
+│   │   ├── ClueScreen.tsx         # 线索查看
+│   │   ├── VoteScreen.tsx         # 投票页面
+│   │   ├── ResultScreen.tsx       # 结果页面
+│   │   ├── ProfileScreen.tsx      # 个人中心
+│   │   ├── SettingsScreen.tsx     # 设置页面
+│   │   └── ...
+│   │
+│   ├── services/            # 服务层
+│   │   ├── ai.ts           # AI 对话服务
+│   │   ├── storage.ts      # 本地存储服务
+│   │   └── firebase.ts     # Firebase 服务
+│   │
+│   ├── data/               # 数据层
+│   │   └── scripts.ts      # 剧本数据
+│   │
+│   ├── i18n/               # 国际化
+│   │   ├── index.ts
+│   │   └── locales/
+│   │       ├── en.ts       # 英文
+│   │       ├── zh.ts       # 中文
+│   │       └── ja.ts       # 日文
+│   │
+│   ├── types/              # TypeScript 类型定义
+│   │   ├── index.ts
+│   │   └── script.ts
+│   │
+│   ├── utils/              # 工具函数
+│   │   └── constants.ts    # 常量定义
+│   │
+│   └── store/              # 状态管理
+│       └── index.ts
+│
+├── assets/                 # 静态资源
+├── App.tsx                # 应用入口
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## 🔑 API 配置
+
+### CharaBoard API（AI 对话）
+
+项目使用 CharaBoard API 提供 AI 对话功能。
+
+**配置步骤：**
+
+1. 打开 `src/services/ai.ts`
+2. 找到 API 配置部分：
+
+```typescript
+const API_BASE_URL = 'https://api-chat.charaboard.com/v1';
+const API_KEY = 'your_api_key_here';
+const GPT_TYPE = 8602; // MiniMax M2.1
+```
+
+3. 替换 `API_KEY` 为你的密钥
+
+**功能说明：**
+
+- **思考链模式** - 启用后 AI 会展示推理过程
+- **流式输出** - 实时显示生成内容
+- **自动降级** - 失败时自动切换到普通模式
+
+### Firebase（可选）
+
+用于用户认证和数据同步。
+
+**配置步骤：**
+
+1. 在 Firebase Console 创建项目
+2. 获取配置信息
+3. 更新 `src/config/firebase.ts`
+
+---
+
+## 🎮 游戏流程
+
+### 1. 选择剧本
+- 浏览可用剧本列表
+- 查看剧本详情（背景、角色、难度）
+- 选择想要扮演的角色
+
+### 2. 开场介绍
+- AI 生成专属开场白
+- 了解角色背景和目标
+- 查看初始线索
+
+### 3. 搜证阶段
+- 与 DM 对话获取提示
+- 探索场景发现线索
+- 记录重要信息
+
+### 4. 讨论阶段
+- 与其他角色对话
+- 分享和隐藏信息
+- 推理案件真相
+
+### 5. 投票环节
+- 选择你认为的凶手
+- 提交推理依据
+- 等待结果揭晓
+
+### 6. 真相大白
+- 查看完整案件真相
+- AI 评价你的推理
+- 解锁成就和奖励
+
+---
+
+## 🎨 设计规范
+
+### 配色方案
+
+```
+主色调：#8B4789 (神秘紫)
+辅助色：#D4AF37 (优雅金)
+背景色：#16213E (深蓝黑)
+卡片背景：#1A1A2E (深灰蓝)
+文字颜色：
+  - 主文字：#E8E8E8 (浅灰)
+  - 次要文字：#A0A0A0 (中灰)
+  - 强调文字：#D4AF37 (金色)
+```
+
+### 圆角规范
+
+```
+小圆角：8px  - 标签、徽章
+中圆角：12px - 按钮、输入框
+大圆角：16px - 卡片
+超大圆角：24px - 模态框
+```
+
+### 间距规范
+
+```
+xs: 4px   - 紧密元素
+sm: 8px   - 相关元素
+md: 16px  - 标准间距
+lg: 24px  - 区块间距
+xl: 32px  - 大区块间距
+```
+
+---
+
+## 🔧 开发指南
+
+### 添加新剧本
+
+1. 在 `src/data/scripts.ts` 中添加剧本数据
+2. 定义角色、线索、真相等信息
+3. 配置 AI 提示词
+
+### 自定义 AI 行为
+
+编辑 `src/services/ai.ts` 中的系统提示词：
+
+```typescript
+const getDMSystemPrompt = (script: Script, character: Character) => `
+  你是一个剧本杀游戏的DM...
+  // 自定义 DM 行为
+`;
+```
+
+### 添加新语言
+
+1. 在 `src/i18n/locales/` 创建新语言文件
+2. 在 `src/i18n/index.ts` 注册语言
+3. 更新 `LanguageSelector` 组件
+
+---
+
+## 📊 性能优化
+
+- ✅ 使用 `requestAnimationFrame` 优化流式更新
+- ✅ 图片懒加载和缓存
+- ✅ 组件级别的状态管理
+- ✅ 避免不必要的重渲染
+- ✅ 异步数据加载
+
+---
+
+## 🐛 已知问题
+
+1. **思考链 API 不稳定** - 已添加自动降级机制
+2. **流式输出延迟** - 网络条件影响，已优化缓冲策略
+3. **iOS 键盘遮挡** - 使用 KeyboardAvoidingView 解决
+
+---
+
+## 🔮 未来计划
+
+- [ ] 多人在线对战模式
+- [ ] 自定义剧本编辑器
+- [ ] 语音对话功能
+- [ ] AR 场景探索
+- [ ] 社区剧本分享
+- [ ] 成就系统
+- [ ] 排行榜
+
+---
+
+## 📄 许可证
+
+MIT License
+
+---
+
+## 👥 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+<div align="center">
+
+**用 ❤️ 和 ☕ 制作**
+
+[⬆ 回到顶部](#-lovemix---ai-驱动的剧本杀游戏平台)
+
+</div>
+
 cd LoveMix
 ```
 
