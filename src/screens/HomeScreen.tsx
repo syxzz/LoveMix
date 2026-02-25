@@ -1,7 +1,6 @@
 /**
- * HomeScreen - 首页
- * 显示四个功能入口卡片和顶部渐变区域
- * 增加个人中心入口
+ * HomeScreen - 剧本选择页面
+ * 显示可用剧本列表
  */
 
 import React, { useEffect, useState } from 'react';
@@ -11,57 +10,57 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Animated,
-  Image,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
-import { RootStackParamList } from '../types';
-import { COLORS, RADIUS, SPACING, HOME_FEATURES } from '../utils/constants';
-import { getLovePoints } from '../services/storage';
+import { RootStackParamList, Script } from '../types';
+import { COLORS, SPACING, RADIUS } from '../utils/constants';
+import { getAllScripts } from '../data/scripts';
+import { getGameProgress, getCompletedScripts } from '../services/storage';
 import { userAtom } from '../store';
 import { Feather } from '@expo/vector-icons';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+const { width } = Dimensions.get('window');
+
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [user] = useAtom(userAtom);
   const { t } = useTranslation();
-  const [lovePoints, setLovePoints] = useState(520);
-  const heartScale = React.useRef(new Animated.Value(1)).current;
+  const [scripts, setScripts] = useState<Script[]>([]);
+  const [progressMap, setProgressMap] = useState<Record<string, any>>({});
+  const [completedMap, setCompletedMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    // 加载爱心值
-    loadLovePoints();
-
-    // 爱心跳动动画
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(heartScale, {
-          toValue: 1.1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(heartScale, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    loadScripts();
   }, []);
 
-  const loadLovePoints = async () => {
-    const points = await getLovePoints();
-    setLovePoints(user?.lovePoints || points);
+  const loadScripts = async () => {
+    const allScripts = getAllScripts();
+    setScripts(allScripts);
+
+    // 加载进度和完成状态
+    const progress: Record<string, any> = {};
+    const completed = await getCompletedScripts();
+
+    for (const script of allScripts) {
+      const scriptProgress = await getGameProgress(script.id);
+      if (scriptProgress) {
+        progress[script.id] = scriptProgress;
+      }
+    }
+
+    setProgressMap(progress);
+    setCompletedMap(completed);
   };
 
-  const handleFeaturePress = (screen: string) => {
-    navigation.navigate(screen as keyof RootStackParamList);
+  const handleScriptPress = (script: Script) => {
+    navigation.navigate('ScriptDetail', { scriptId: script.id });
   };
 
   const handleProfilePress = () => {
@@ -70,6 +69,19 @@ export const HomeScreen: React.FC = () => {
 
   const handleSettingsPress = () => {
     navigation.navigate('Settings');
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy':
+        return '#27AE60';
+      case 'medium':
+        return '#F39C12';
+      case 'hard':
+        return '#E74C3C';
+      default:
+        return COLORS.textGray;
+    }
   };
 
   return (
@@ -83,73 +95,117 @@ export const HomeScreen: React.FC = () => {
       >
         <View style={styles.headerContent}>
           <View style={styles.userSection}>
-            <Text style={styles.greeting}>{t('home.greeting', { name: user?.username || t('home.defaultName') })}</Text>
-            <Text style={styles.membershipBadge}>
-              {user?.membershipType === 'vip'
-                ? t('home.vipMember')
-                : user?.membershipType === 'premium'
-                ? t('home.premiumMember')
-                : t('home.freeMember')}
+            <Text style={styles.greeting}>
+              {t('home.greeting', { name: user?.username || t('home.defaultName') })}
             </Text>
+            <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
           </View>
 
           <View style={styles.rightSection}>
-            <Animated.View
-              style={[
-                styles.lovePointsContainer,
-                { transform: [{ scale: heartScale }] },
-              ]}
-            >
-              <Text style={styles.lovePoints}>❤️ {lovePoints}</Text>
-            </Animated.View>
-
             <TouchableOpacity
-              style={styles.settingsButton}
+              style={styles.iconButton}
               onPress={handleSettingsPress}
             >
               <Feather name="settings" size={22} color={COLORS.textLight} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.avatarButton}
+              style={styles.iconButton}
               onPress={handleProfilePress}
             >
-              {user?.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Feather name="user" size={20} color={COLORS.textLight} />
-                </View>
-              )}
+              <Feather name="user" size={22} color={COLORS.textLight} />
             </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
 
-      {/* 功能卡片列表 */}
+      {/* 剧本列表 */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {HOME_FEATURES.map((feature) => (
-          <TouchableOpacity
-            key={feature.id}
-            style={styles.featureCard}
-            onPress={() => handleFeaturePress(feature.screen)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.featureEmoji}>
-              <Text style={styles.emojiText}>{feature.emoji}</Text>
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>{feature.title}</Text>
-              <Text style={styles.featureDescription}>{feature.description}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {scripts.map((script) => {
+          const hasProgress = !!progressMap[script.id];
+          const isCompleted = !!completedMap[script.id];
+          const success = completedMap[script.id]?.success;
 
-        {/* 底部间距 */}
+          return (
+            <TouchableOpacity
+              key={script.id}
+              style={styles.scriptCard}
+              onPress={() => handleScriptPress(script)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['rgba(139, 71, 137, 0.2)', 'rgba(44, 62, 80, 0.2)']}
+                style={styles.cardGradient}
+              />
+
+              <View style={styles.cardContent}>
+                {/* 标题和状态 */}
+                <View style={styles.cardHeader}>
+                  <Text style={styles.scriptTitle}>{script.title}</Text>
+                  {isCompleted && (
+                    <View style={[styles.statusBadge, { backgroundColor: success ? COLORS.success : COLORS.error }]}>
+                      <Text style={styles.statusText}>
+                        {success ? '✓ ' : '✗ '}{t('home.completed')}
+                      </Text>
+                    </View>
+                  )}
+                  {hasProgress && !isCompleted && (
+                    <View style={[styles.statusBadge, { backgroundColor: COLORS.warning }]}>
+                      <Text style={styles.statusText}>{t('home.continueGame')}</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* 描述 */}
+                <Text style={styles.scriptDescription} numberOfLines={2}>
+                  {script.description}
+                </Text>
+
+                {/* 信息标签 */}
+                <View style={styles.infoRow}>
+                  <View style={styles.infoTag}>
+                    <Feather name="clock" size={14} color={COLORS.accent} />
+                    <Text style={styles.infoText}>{script.duration}</Text>
+                  </View>
+
+                  <View style={styles.infoTag}>
+                    <Feather name="users" size={14} color={COLORS.accent} />
+                    <Text style={styles.infoText}>{script.characterCount} {t('home.characters')}</Text>
+                  </View>
+
+                  <View style={[styles.infoTag, { borderColor: getDifficultyColor(script.difficulty) }]}>
+                    <Text style={[styles.infoText, { color: getDifficultyColor(script.difficulty) }]}>
+                      {t(`home.difficulty.${script.difficulty}`)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 开始按钮 */}
+                <TouchableOpacity
+                  style={styles.startButton}
+                  onPress={() => handleScriptPress(script)}
+                >
+                  <LinearGradient
+                    colors={[COLORS.primary, COLORS.accent]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.startButtonGradient}
+                  >
+                    <Text style={styles.startButtonText}>
+                      {hasProgress && !isCompleted ? t('home.continueGame') : t('home.startGame')}
+                    </Text>
+                    <Feather name="arrow-right" size={18} color={COLORS.textLight} />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </View>
@@ -162,8 +218,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    height: 200,
     paddingTop: 60,
+    paddingBottom: 30,
     paddingHorizontal: SPACING.lg,
   },
   headerContent: {
@@ -178,103 +234,108 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.textLight,
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  membershipBadge: {
-    fontSize: 14,
-    fontWeight: '600',
+  subtitle: {
+    fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
   },
   rightSection: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
+    gap: SPACING.sm,
   },
-  lovePointsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  lovePoints: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.textLight,
-  },
-  settingsButton: {
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   scrollView: {
     flex: 1,
-    marginTop: -40,
   },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
   },
-  featureCard: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.background,
+  scriptCard: {
     borderRadius: RADIUS.large,
+    marginBottom: SPACING.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  cardContent: {
     padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  featureEmoji: {
-    width: 72,
-    height: 72,
-    justifyContent: 'center',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: SPACING.md,
+    marginBottom: SPACING.sm,
   },
-  emojiText: {
-    fontSize: 48,
-  },
-  featureContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  featureTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  scriptTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
     color: COLORS.textDark,
-    marginBottom: 4,
+    flex: 1,
   },
-  featureDescription: {
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: SPACING.sm,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textLight,
+  },
+  scriptDescription: {
     fontSize: 14,
     color: COLORS.textGray,
+    marginBottom: SPACING.md,
+    lineHeight: 20,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  infoTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+  },
+  infoText: {
+    fontSize: 12,
+    color: COLORS.accent,
+    fontWeight: '500',
+  },
+  startButton: {
+    borderRadius: RADIUS.medium,
+    overflow: 'hidden',
+  },
+  startButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  startButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textLight,
   },
   bottomSpacer: {
     height: 20,

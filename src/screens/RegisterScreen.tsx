@@ -1,5 +1,6 @@
 /**
- * RegisterScreen - 注册页面
+ * RegisterScreen - 剧本杀主题注册页面
+ * 悬疑风格 + 神秘特效
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -13,8 +14,8 @@ import {
   Platform,
   Alert,
   ScrollView,
-  Dimensions,
   Animated,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -22,25 +23,23 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
-import { GradientButton } from '../components/GradientButton';
-import { COLORS, SPACING, RADIUS } from '../utils/constants';
+import { COLORS, RADIUS } from '../utils/constants';
 import { register } from '../services/auth';
 import { userAtom, isAuthenticatedAtom } from '../store';
 import { Feather } from '@expo/vector-icons';
+
+const { width, height } = Dimensions.get('window');
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'Register'
 >;
 
-const { width, height } = Dimensions.get('window');
-
-// 浮动气泡组件
-const FloatingBubble: React.FC<{ delay: number; size: number }> = ({ delay, size }) => {
+// 漂浮符号组件
+const FloatingSymbol: React.FC<{ symbol: string; delay: number }> = ({ symbol, delay }) => {
   const translateY = useRef(new Animated.Value(height)).current;
-  const translateX = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.loop(
@@ -48,25 +47,13 @@ const FloatingBubble: React.FC<{ delay: number; size: number }> = ({ delay, size
         Animated.sequence([
           Animated.delay(delay),
           Animated.timing(opacity, {
-            toValue: 0.3,
-            duration: 2000,
+            toValue: 0.4,
+            duration: 1500,
             useNativeDriver: true,
           }),
           Animated.timing(opacity, {
             toValue: 0,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(scale, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scale, {
-            toValue: 0,
-            duration: 1000,
+            duration: 1500,
             useNativeDriver: true,
           }),
         ]),
@@ -82,39 +69,35 @@ const FloatingBubble: React.FC<{ delay: number; size: number }> = ({ delay, size
             useNativeDriver: true,
           }),
         ]),
-        Animated.sequence([
-          Animated.timing(translateX, {
-            toValue: Math.random() * 200 - 100,
-            duration: 5000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateX, {
-            toValue: 0,
-            duration: 5000,
-            useNativeDriver: true,
-          }),
-        ]),
+        Animated.timing(rotate, {
+          toValue: 1,
+          duration: 10000,
+          useNativeDriver: true,
+        }),
       ])
     ).start();
   }, []);
 
+  const rotation = rotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
-    <Animated.View
+    <Animated.Text
       style={[
-        styles.bubble,
+        styles.floatingSymbol,
         {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
           left: Math.random() * width,
-          transform: [{ translateY }, { translateX }, { scale }],
+          transform: [{ translateY }, { rotate: rotation }],
           opacity,
         },
       ]}
-    />
+    >
+      {symbol}
+    </Animated.Text>
   );
 };
-
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<RegisterScreenNavigationProp>();
@@ -182,24 +165,25 @@ export const RegisterScreen: React.FC = () => {
     }
   };
 
+  const symbols = ['🔍', '🎭', '🗝️', '📜', '🕯️', '⚖️'];
+
   return (
     <View style={styles.container}>
-      {/* 动态渐变背景 */}
+      {/* 深色渐变背景 */}
       <LinearGradient
-        colors={['#FF6B9D', '#C471ED', '#12C2E9']}
+        colors={[COLORS.background, COLORS.secondary, COLORS.primary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* 浮动气泡 */}
-      {[...Array(6)].map((_, i) => (
-        <FloatingBubble
-          key={i}
-          delay={i * 800}
-          size={50 + Math.random() * 80}
-        />
+      {/* 漂浮符号效果 */}
+      {symbols.map((symbol, i) => (
+        <FloatingSymbol key={i} symbol={symbol} delay={i * 1000} />
       ))}
+
+      {/* 暗纹理覆盖层 */}
+      <View style={styles.textureOverlay} />
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -212,10 +196,10 @@ export const RegisterScreen: React.FC = () => {
         >
           <View style={styles.backButtonGlass}>
             <LinearGradient
-              colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.15)']}
+              colors={['rgba(139, 71, 137, 0.4)', 'rgba(44, 62, 80, 0.4)']}
               style={styles.backButtonGradient}
             />
-            <Feather name="arrow-left" size={24} color="#FFFFFF" />
+            <Feather name="arrow-left" size={24} color={COLORS.textLight} />
           </View>
         </TouchableOpacity>
 
@@ -236,14 +220,21 @@ export const RegisterScreen: React.FC = () => {
           >
             {/* 标题区域 */}
             <View style={styles.headerSection}>
+              <View style={styles.iconContainer}>
+                <LinearGradient
+                  colors={[COLORS.primary, COLORS.accent]}
+                  style={styles.iconGradient}
+                />
+                <Text style={styles.icon}>🎭</Text>
+              </View>
               <Text style={styles.welcomeText}>{t('register.createAccount')}</Text>
               <Text style={styles.subtitle}>{t('register.subtitle')}</Text>
             </View>
 
-            {/* 表单卡片 - 液态玻璃效果 */}
+            {/* 表单卡片 */}
             <View style={styles.formCard}>
               <LinearGradient
-                colors={['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.1)']}
+                colors={['rgba(139, 71, 137, 0.2)', 'rgba(44, 62, 80, 0.2)']}
                 style={styles.glassGradient}
               />
 
@@ -252,15 +243,15 @@ export const RegisterScreen: React.FC = () => {
                 <Text style={styles.label}>{t('register.email')}</Text>
                 <View style={styles.inputWrapper}>
                   <LinearGradient
-                    colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                    colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
                     style={styles.inputGradient}
                   />
                   <View style={styles.inputContainer}>
-                    <Feather name="mail" size={20} color="rgba(255,255,255,0.8)" />
+                    <Feather name="mail" size={20} color={COLORS.accent} />
                     <TextInput
                       style={styles.input}
                       placeholder={t('register.emailPlaceholder')}
-                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      placeholderTextColor={COLORS.textGray}
                       value={email}
                       onChangeText={setEmail}
                       keyboardType="email-address"
@@ -276,15 +267,15 @@ export const RegisterScreen: React.FC = () => {
                 <Text style={styles.label}>{t('register.username')}</Text>
                 <View style={styles.inputWrapper}>
                   <LinearGradient
-                    colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                    colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
                     style={styles.inputGradient}
                   />
                   <View style={styles.inputContainer}>
-                    <Feather name="user" size={20} color="rgba(255,255,255,0.8)" />
+                    <Feather name="user" size={20} color={COLORS.accent} />
                     <TextInput
                       style={styles.input}
                       placeholder={t('register.usernamePlaceholder')}
-                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      placeholderTextColor={COLORS.textGray}
                       value={username}
                       onChangeText={setUsername}
                       autoCapitalize="none"
@@ -298,15 +289,15 @@ export const RegisterScreen: React.FC = () => {
                 <Text style={styles.label}>{t('register.password')}</Text>
                 <View style={styles.inputWrapper}>
                   <LinearGradient
-                    colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                    colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
                     style={styles.inputGradient}
                   />
                   <View style={styles.inputContainer}>
-                    <Feather name="lock" size={20} color="rgba(255,255,255,0.8)" />
+                    <Feather name="lock" size={20} color={COLORS.accent} />
                     <TextInput
                       style={styles.input}
                       placeholder={t('register.passwordPlaceholder')}
-                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      placeholderTextColor={COLORS.textGray}
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
@@ -316,7 +307,7 @@ export const RegisterScreen: React.FC = () => {
                       <Feather
                         name={showPassword ? 'eye' : 'eye-off'}
                         size={20}
-                        color="rgba(255,255,255,0.8)"
+                        color={COLORS.accent}
                       />
                     </TouchableOpacity>
                   </View>
@@ -328,15 +319,15 @@ export const RegisterScreen: React.FC = () => {
                 <Text style={styles.label}>{t('register.confirmPassword')}</Text>
                 <View style={styles.inputWrapper}>
                   <LinearGradient
-                    colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                    colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
                     style={styles.inputGradient}
                   />
                   <View style={styles.inputContainer}>
-                    <Feather name="lock" size={20} color="rgba(255,255,255,0.8)" />
+                    <Feather name="lock" size={20} color={COLORS.accent} />
                     <TextInput
                       style={styles.input}
                       placeholder={t('register.confirmPasswordPlaceholder')}
-                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      placeholderTextColor={COLORS.textGray}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
                       secureTextEntry={!showConfirmPassword}
@@ -348,7 +339,7 @@ export const RegisterScreen: React.FC = () => {
                       <Feather
                         name={showConfirmPassword ? 'eye' : 'eye-off'}
                         size={20}
-                        color="rgba(255,255,255,0.8)"
+                        color={COLORS.accent}
                       />
                     </TouchableOpacity>
                   </View>
@@ -356,14 +347,23 @@ export const RegisterScreen: React.FC = () => {
               </View>
 
               {/* 注册按钮 */}
-              <View style={styles.buttonSection}>
-                <GradientButton
-                  title={t('register.registerButton')}
-                  onPress={handleRegister}
-                  loading={loading}
-                  disabled={loading}
-                />
-              </View>
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={handleRegister}
+                disabled={loading}
+              >
+                <LinearGradient
+                  colors={[COLORS.primary, COLORS.accent]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.registerButtonGradient}
+                >
+                  <Feather name="user-plus" size={20} color={COLORS.textLight} />
+                  <Text style={styles.registerButtonText}>
+                    {loading ? '注册中...' : t('register.registerButton')}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
 
               {/* 登录链接 */}
               <View style={styles.loginSection}>
@@ -384,9 +384,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  bubble: {
+  floatingSymbol: {
     position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    fontSize: 30,
+  },
+  textureOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   keyboardView: {
     flex: 1,
@@ -403,14 +407,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
   },
   backButtonGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -430,35 +429,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+    overflow: 'hidden',
+  },
+  iconGradient: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.3,
+  },
+  icon: {
+    fontSize: 40,
+  },
   welcomeText: {
-    fontSize: 42,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: COLORS.textLight,
     marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 4 },
+    textShadowColor: COLORS.accent,
+    textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
-    fontFamily: 'DancingScript_700Bold',
-    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.95)',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-    fontFamily: 'Poppins_400Regular',
+    color: COLORS.textGray,
   },
   formCard: {
-    borderRadius: 32,
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: COLORS.border,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
   },
   glassGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -469,16 +476,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.textDark,
     marginBottom: 10,
-    fontFamily: 'Poppins_600SemiBold',
-    letterSpacing: 0.3,
   },
   inputWrapper: {
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: COLORS.border,
   },
   inputGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -493,12 +498,25 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: 'Poppins_400Regular',
+    color: COLORS.textDark,
   },
-  buttonSection: {
+  registerButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
     marginTop: 8,
     marginBottom: 20,
+  },
+  registerButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  registerButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
   },
   loginSection: {
     flexDirection: 'row',
@@ -508,14 +526,12 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
-    fontFamily: 'Poppins_400Regular',
+    color: COLORS.textGray,
   },
   loginLink: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: COLORS.accent,
     fontWeight: '700',
     textDecorationLine: 'underline',
-    fontFamily: 'Poppins_700Bold',
   },
 });

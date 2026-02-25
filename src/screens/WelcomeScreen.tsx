@@ -1,6 +1,6 @@
 /**
- * WelcomeScreen - 现代化欢迎页面
- * 苹果风格设计 + 液态玻璃效果 + 丰富动画
+ * WelcomeScreen - 剧本杀主题欢迎页面
+ * 惊悚悬疑风格 + 神秘氛围 + 特效动画
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -20,8 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
-import { GradientButton } from '../components/GradientButton';
-import { COLORS, SPACING, RADIUS } from '../utils/constants';
+import { COLORS, RADIUS } from '../utils/constants';
 import { DEBUG_CONFIG, FEATURE_FLAGS } from '../config';
 import { guestLogin, debugAdminLogin } from '../services/auth';
 import { userAtom, isAuthenticatedAtom } from '../store';
@@ -31,11 +30,10 @@ type WelcomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 
 const { width, height } = Dimensions.get('window');
 
-// 浮动气泡组件
-const FloatingBubble: React.FC<{ delay: number; size: number }> = ({ delay, size }) => {
+// 神秘粒子效果组件
+const MysteryParticle: React.FC<{ delay: number }> = ({ delay }) => {
   const translateY = useRef(new Animated.Value(height)).current;
-  const translateX = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0)).current;
+  const translateX = useRef(new Animated.Value(Math.random() * width)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -44,49 +42,25 @@ const FloatingBubble: React.FC<{ delay: number; size: number }> = ({ delay, size
         Animated.sequence([
           Animated.delay(delay),
           Animated.timing(opacity, {
-            toValue: 0.4,
-            duration: 2000,
+            toValue: 0.6,
+            duration: 1500,
             useNativeDriver: true,
           }),
           Animated.timing(opacity, {
             toValue: 0,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(scale, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scale, {
-            toValue: 0,
-            duration: 1000,
+            duration: 1500,
             useNativeDriver: true,
           }),
         ]),
         Animated.sequence([
           Animated.timing(translateY, {
-            toValue: -200,
-            duration: 10000,
+            toValue: -100,
+            duration: 8000,
             useNativeDriver: true,
           }),
           Animated.timing(translateY, {
             toValue: height,
             duration: 0,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(translateX, {
-            toValue: Math.random() * 200 - 100,
-            duration: 5000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateX, {
-            toValue: 0,
-            duration: 5000,
             useNativeDriver: true,
           }),
         ]),
@@ -97,13 +71,9 @@ const FloatingBubble: React.FC<{ delay: number; size: number }> = ({ delay, size
   return (
     <Animated.View
       style={[
-        styles.bubble,
+        styles.particle,
         {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          left: Math.random() * width,
-          transform: [{ translateY }, { translateX }, { scale }],
+          transform: [{ translateY }, { translateX }],
           opacity,
         },
       ]}
@@ -122,28 +92,21 @@ export const WelcomeScreen: React.FC = () => {
   // 动画值
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(100)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const logoScale = useRef(new Animated.Value(1)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
+  const logoGlow = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // 入场动画
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1000,
+        duration: 1500,
         useNativeDriver: true,
       }),
       Animated.spring(slideUpAnim, {
         toValue: 0,
-        tension: 40,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 40,
-        friction: 8,
+        tension: 30,
+        friction: 10,
         useNativeDriver: true,
       }),
     ]).start();
@@ -152,43 +115,38 @@ export const WelcomeScreen: React.FC = () => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(logoScale, {
-          toValue: 1.1,
-          duration: 2000,
+          toValue: 1.05,
+          duration: 2500,
           useNativeDriver: true,
         }),
         Animated.timing(logoScale, {
           toValue: 1,
-          duration: 2000,
+          duration: 2500,
           useNativeDriver: true,
         }),
       ])
     ).start();
 
-    // Logo 轻微旋转
+    // Logo 发光效果
     Animated.loop(
       Animated.sequence([
-        Animated.timing(logoRotate, {
+        Animated.timing(logoGlow, {
           toValue: 1,
-          duration: 3000,
+          duration: 2000,
           useNativeDriver: true,
         }),
-        Animated.timing(logoRotate, {
-          toValue: -1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoRotate, {
+        Animated.timing(logoGlow, {
           toValue: 0,
-          duration: 3000,
+          duration: 2000,
           useNativeDriver: true,
         }),
       ])
     ).start();
   }, []);
 
-  const rotate = logoRotate.interpolate({
-    inputRange: [-1, 1],
-    outputRange: ['-5deg', '5deg'],
+  const glowOpacity = logoGlow.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.8],
   });
 
   const handleGuestLogin = async () => {
@@ -229,7 +187,7 @@ export const WelcomeScreen: React.FC = () => {
     if (newCount >= 5) {
       Alert.alert(
         'Debug 模式',
-        '是否使用管理员账号登录？\n\n账号: admin@lovemix.app\n密码: admin123',
+        '是否使用管理员账号登录？',
         [
           { text: '取消', style: 'cancel', onPress: () => setDebugTapCount(0) },
           {
@@ -248,22 +206,21 @@ export const WelcomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* 动态渐变背景 */}
+      {/* 深色渐变背景 */}
       <LinearGradient
-        colors={['#FF6B9D', '#C471ED', '#12C2E9']}
+        colors={[COLORS.background, COLORS.secondary, COLORS.primary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* 浮动气泡 */}
-      {[...Array(8)].map((_, i) => (
-        <FloatingBubble
-          key={i}
-          delay={i * 1000}
-          size={60 + Math.random() * 100}
-        />
+      {/* 神秘粒子效果 */}
+      {[...Array(20)].map((_, i) => (
+        <MysteryParticle key={i} delay={i * 400} />
       ))}
+
+      {/* 暗纹理覆盖层 */}
+      <View style={styles.textureOverlay} />
 
       {/* 内容区域 */}
       <View style={styles.content}>
@@ -273,7 +230,6 @@ export const WelcomeScreen: React.FC = () => {
             styles.logoSection,
             {
               opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
             },
           ]}
         >
@@ -286,17 +242,34 @@ export const WelcomeScreen: React.FC = () => {
               style={[
                 styles.logoContainer,
                 {
-                  transform: [{ scale: logoScale }, { rotate }],
+                  transform: [{ scale: logoScale }],
                 },
               ]}
             >
-              <LinearGradient
-                colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0.1)']}
-                style={styles.logoGradient}
+              {/* 发光效果 */}
+              <Animated.View
+                style={[
+                  styles.logoGlow,
+                  {
+                    opacity: glowOpacity,
+                  },
+                ]}
               />
-              <Text style={styles.logo}>💕</Text>
+
+              {/* Logo 图标 */}
+              <View style={styles.logoIconContainer}>
+                <LinearGradient
+                  colors={[COLORS.primary, COLORS.accent]}
+                  style={styles.logoGradient}
+                />
+                <Text style={styles.logo}>🎭</Text>
+              </View>
             </Animated.View>
-            <Text style={styles.appName}>LoveMix</Text>
+
+            {/* App 名称 */}
+            <Text style={styles.appName}>{t('welcome.appName')}</Text>
+            <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
+
             {DEBUG_CONFIG.SHOW_DEBUG_BUTTON && debugTapCount > 0 && (
               <Text style={styles.debugHint}>
                 再点击 {5 - debugTapCount} 次进入 Debug 模式
@@ -315,12 +288,25 @@ export const WelcomeScreen: React.FC = () => {
             },
           ]}
         >
-          <GradientButton
-            title={t('welcome.startButton')}
+          {/* 开始游戏按钮 */}
+          <TouchableOpacity
+            style={styles.primaryButton}
             onPress={() => navigation.navigate('Register')}
             disabled={loading}
-          />
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.accent]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.primaryButtonGradient}
+            >
+              <Feather name="play" size={24} color={COLORS.textLight} />
+              <Text style={styles.primaryButtonText}>{t('welcome.startButton')}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
 
+          {/* 游客模式按钮 */}
           {FEATURE_FLAGS.ENABLE_GUEST_MODE && (
             <TouchableOpacity
               style={styles.glassButton}
@@ -329,31 +315,39 @@ export const WelcomeScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.15)']}
+                colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
                 style={styles.glassButtonGradient}
               />
               <View style={styles.glassButtonContent}>
                 <View style={styles.iconCircle}>
-                  <Feather name="zap" size={20} color="#FFFFFF" />
+                  <Feather name="zap" size={20} color={COLORS.accent} />
                 </View>
                 <View style={styles.buttonTextContainer}>
                   <Text style={styles.glassButtonTitle}>{t('welcome.guestLogin')}</Text>
                   <Text style={styles.glassButtonSubtitle}>{t('welcome.guestSubtitle')}</Text>
                 </View>
-                <Feather name="arrow-right" size={20} color="rgba(255,255,255,0.9)" />
+                <Feather name="arrow-right" size={20} color={COLORS.accent} />
               </View>
             </TouchableOpacity>
           )}
 
+          {/* 登录链接 */}
           <TouchableOpacity
             style={styles.loginLink}
             onPress={() => navigation.navigate('Login')}
           >
             <Text style={styles.loginText}>
-              {t('welcome.hasAccount')}<Text style={styles.loginLinkText}>{t('welcome.loginNow')}</Text>
+              {t('welcome.hasAccount')} <Text style={styles.loginLinkText}>{t('welcome.loginNow')}</Text>
             </Text>
           </TouchableOpacity>
         </Animated.View>
+      </View>
+
+      {/* 底部装饰线 */}
+      <View style={styles.bottomDecoration}>
+        <View style={styles.decorationLine} />
+        <Text style={styles.decorationText}>真相只有一个</Text>
+        <View style={styles.decorationLine} />
       </View>
     </View>
   );
@@ -366,78 +360,116 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 80 : 60,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === 'ios' ? 100 : 80,
+    paddingBottom: 60,
     justifyContent: 'space-between',
   },
-  bubble: {
+  particle: {
     position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: COLORS.accent,
+  },
+  textureOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   logoSection: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 40,
   },
   logoTouchable: {
     alignItems: 'center',
   },
   logoContainer: {
+    width: 160,
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoGlow: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: COLORS.accent,
+  },
+  logoIconContainer: {
     width: 140,
     height: 140,
     borderRadius: 70,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.3,
-    shadowRadius: 30,
+    borderWidth: 3,
+    borderColor: COLORS.accent,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
     elevation: 20,
+    overflow: 'hidden',
   },
   logoGradient: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.3,
   },
   logo: {
-    fontSize: 70,
+    fontSize: 80,
   },
   appName: {
-    fontSize: 64,
+    fontSize: 56,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: COLORS.textLight,
     marginBottom: 12,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 10,
-    letterSpacing: 2,
-    fontFamily: 'Niconne_400Regular',
+    textShadowColor: COLORS.accent,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
+    letterSpacing: 4,
   },
   tagline: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.95)',
+    color: COLORS.accent,
     textAlign: 'center',
-    letterSpacing: 0.5,
+    letterSpacing: 2,
+    fontWeight: '600',
   },
   debugHint: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.textGray,
     marginTop: 12,
   },
   buttonSection: {
     gap: 16,
   },
+  primaryButton: {
+    borderRadius: RADIUS.large,
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  primaryButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 12,
+  },
+  primaryButtonText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
+    letterSpacing: 1,
+  },
   glassButton: {
-    borderRadius: 24,
+    borderRadius: RADIUS.large,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+    borderColor: COLORS.border,
   },
   glassButtonGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -452,7 +484,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(212, 175, 55, 0.2)',
+    borderWidth: 1,
+    borderColor: COLORS.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -462,14 +496,12 @@ const styles = StyleSheet.create({
   glassButtonTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: COLORS.textDark,
     marginBottom: 2,
-    fontFamily: 'Poppins_600SemiBold',
   },
   glassButtonSubtitle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
-    fontFamily: 'Poppins_400Regular',
+    color: COLORS.textGray,
   },
   loginLink: {
     paddingVertical: 16,
@@ -477,13 +509,34 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
-    fontFamily: 'Poppins_400Regular',
+    color: COLORS.textGray,
   },
   loginLinkText: {
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: COLORS.accent,
     textDecorationLine: 'underline',
-    fontFamily: 'Poppins_700Bold',
+  },
+  bottomDecoration: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    gap: 12,
+  },
+  decorationLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.accent,
+    opacity: 0.5,
+  },
+  decorationText: {
+    fontSize: 12,
+    color: COLORS.accent,
+    fontWeight: '600',
+    letterSpacing: 2,
   },
 });

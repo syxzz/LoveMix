@@ -21,16 +21,18 @@ import {
   RegisterScreen,
   ForgotPasswordScreen,
   HomeScreen,
-  FaceMergeScreen,
-  CardScreen,
-  DateScreen,
-  StickerScreen,
   SettingsScreen,
   ProfileScreen,
   HistoryScreen,
   MembershipScreen,
   CommunityScreen,
 } from './src/screens';
+import { ScriptDetailScreen } from './src/screens/ScriptDetailScreen';
+import { GameScreen } from './src/screens/GameScreen';
+import { ClueScreen } from './src/screens/ClueScreen';
+import { DialogScreen } from './src/screens/DialogScreen';
+import { VoteScreen } from './src/screens/VoteScreen';
+import { ResultScreen } from './src/screens/ResultScreen';
 
 import { RootStackParamList } from './src/types';
 import { userAtom, isAuthenticatedAtom, authLoadingAtom } from './src/store';
@@ -112,10 +114,12 @@ const Navigation: React.FC = () => {
 
       {/* 主应用页面 */}
       <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="FaceMerge" component={FaceMergeScreen} />
-      <Stack.Screen name="Card" component={CardScreen} />
-      <Stack.Screen name="Date" component={DateScreen} />
-      <Stack.Screen name="Sticker" component={StickerScreen} />
+      <Stack.Screen name="ScriptDetail" component={ScriptDetailScreen} />
+      <Stack.Screen name="Game" component={GameScreen} />
+      <Stack.Screen name="Clue" component={ClueScreen} />
+      <Stack.Screen name="Dialog" component={DialogScreen} />
+      <Stack.Screen name="Vote" component={VoteScreen} />
+      <Stack.Screen name="Result" component={ResultScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="History" component={HistoryScreen} />

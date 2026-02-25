@@ -21,7 +21,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAtom, useSetAtom } from 'jotai';
+import { useTranslation } from 'react-i18next';
 import { GradientButton } from '../components/GradientButton';
+import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { userAtom, isAuthenticatedAtom } from '../store';
 import { updateUser, isGuestUser, logout } from '../services/auth';
 import { useImagePicker } from '../hooks/useImagePicker';
@@ -92,6 +94,7 @@ export const ProfileScreen: React.FC = () => {
   const [user, setUser] = useAtom(userAtom);
   const setIsAuthenticated = useSetAtom(isAuthenticatedAtom);
   const { showImagePickerOptions } = useImagePicker();
+  const { t } = useTranslation();
 
   const [username, setUsername] = useState(user?.username || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -129,7 +132,7 @@ export const ProfileScreen: React.FC = () => {
 
   const handleUpdateProfile = async () => {
     if (!username.trim()) {
-      Alert.alert('错误', '用户名不能为空');
+      Alert.alert(t('common.error'), t('profile.usernameRequired'));
       return;
     }
 
@@ -141,9 +144,9 @@ export const ProfileScreen: React.FC = () => {
       });
       setUser(updatedUser);
       setEditMode(false);
-      Alert.alert('成功', '个人资料已更新');
+      Alert.alert(t('common.success'), t('profile.profileUpdated'));
     } catch (error: any) {
-      Alert.alert('更新失败', error.message || '请重试');
+      Alert.alert(t('profile.updateFailed'), error.message || t('common.retry'));
     } finally {
       setLoading(false);
     }
@@ -157,9 +160,9 @@ export const ProfileScreen: React.FC = () => {
         // 更新用户头像
         const updatedUser = await updateUser({ avatar: result.uri });
         setUser(updatedUser);
-        Alert.alert('成功', '头像已更新');
+        Alert.alert(t('common.success'), t('profile.avatarUpdated'));
       } catch (error: any) {
-        Alert.alert('更新失败', error.message || '请重试');
+        Alert.alert(t('profile.updateFailed'), error.message || t('common.retry'));
       } finally {
         setLoading(false);
       }
@@ -211,11 +214,11 @@ export const ProfileScreen: React.FC = () => {
   const getMembershipBadge = () => {
     switch (user?.membershipType) {
       case 'vip':
-        return { label: 'VIP会员', color: '#FFD700' };
+        return { label: t('profile.vipMember'), color: '#FFD700' };
       case 'premium':
-        return { label: '高级会员', color: '#FF6B9D' };
+        return { label: t('profile.premiumMember'), color: '#FF6B9D' };
       default:
-        return { label: '普通会员', color: 'rgba(232,232,232,0.7)' };
+        return { label: t('profile.freeMember'), color: 'rgba(255,255,255,0.7)' };
     }
   };
 
@@ -255,7 +258,7 @@ export const ProfileScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>个人中心</Text>
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
 
         <TouchableOpacity
           style={styles.navButton}
@@ -342,14 +345,14 @@ export const ProfileScreen: React.FC = () => {
               style={styles.cardGradient}
             />
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>邮箱</Text>
+              <Text style={styles.infoLabel}>{t('profile.email')}</Text>
               <Text style={styles.infoValue}>{user?.email}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>用户名</Text>
+              <Text style={styles.infoLabel}>{t('profile.username')}</Text>
               {editMode ? (
                 <View style={styles.inputWrapper}>
                   <LinearGradient
@@ -360,7 +363,7 @@ export const ProfileScreen: React.FC = () => {
                     style={styles.infoInput}
                     value={username}
                     onChangeText={setUsername}
-                    placeholder="请输入用户名"
+                    placeholder={t('register.usernamePlaceholder')}
                     placeholderTextColor="rgba(212,175,55,0.5)"
                   />
                 </View>
@@ -372,7 +375,7 @@ export const ProfileScreen: React.FC = () => {
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>手机号</Text>
+              <Text style={styles.infoLabel}>{t('profile.phone')}</Text>
               {editMode ? (
                 <View style={styles.inputWrapper}>
                   <LinearGradient
@@ -383,14 +386,78 @@ export const ProfileScreen: React.FC = () => {
                     style={styles.infoInput}
                     value={phone}
                     onChangeText={setPhone}
-                    placeholder="请输入手机号"
+                    placeholder={t('profile.phonePlaceholder')}
                     placeholderTextColor="rgba(212,175,55,0.5)"
                     keyboardType="phone-pad"
                   />
                 </View>
               ) : (
-                <Text style={styles.infoValue}>{user?.phone || '未设置'}</Text>
+                <Text style={styles.infoValue}>{user?.phone || t('profile.phoneNotSet')}</Text>
               )}
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>{t('profile.lovePoints')}</Text>
+              <Text style={[styles.infoValue, styles.lovePoints]}>
+                ❤️ {user?.lovePoints || 0}
+              </Text>
+            </View>
+          </View>
+
+          {/* 使用统计卡片 */}
+          <View style={styles.statsCard}>
+            <LinearGradient
+              colors={['rgba(139,71,137,0.2)', 'rgba(44,62,80,0.15)']}
+              style={styles.cardGradient}
+            />
+            <Text style={styles.statsTitle}>{t('profile.usageStats')}</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <View style={styles.statIconContainer}>
+                  <LinearGradient
+                    colors={['rgba(139,71,137,0.4)', 'rgba(212,175,55,0.3)']}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <Text style={styles.statValue}>
+                    {user?.usageCount.faceMerge || 0}
+                  </Text>
+                </View>
+                <Text style={styles.statLabel}>{t('profile.faceMerge')}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <View style={styles.statIconContainer}>
+                  <LinearGradient
+                    colors={['rgba(139,71,137,0.4)', 'rgba(212,175,55,0.3)']}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <Text style={styles.statValue}>{user?.usageCount.card || 0}</Text>
+                </View>
+                <Text style={styles.statLabel}>{t('profile.card')}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <View style={styles.statIconContainer}>
+                  <LinearGradient
+                    colors={['rgba(139,71,137,0.4)', 'rgba(212,175,55,0.3)']}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <Text style={styles.statValue}>{user?.usageCount.date || 0}</Text>
+                </View>
+                <Text style={styles.statLabel}>{t('profile.date')}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <View style={styles.statIconContainer}>
+                  <LinearGradient
+                    colors={['rgba(139,71,137,0.4)', 'rgba(212,175,55,0.3)']}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <Text style={styles.statValue}>
+                    {user?.usageCount.sticker || 0}
+                  </Text>
+                </View>
+                <Text style={styles.statLabel}>{t('profile.sticker')}</Text>
+              </View>
             </View>
           </View>
 
@@ -403,19 +470,19 @@ export const ProfileScreen: React.FC = () => {
               />
               <View style={styles.guestTipHeader}>
                 <Feather name="info" size={22} color="#D4AF37" />
-                <Text style={styles.guestTipTitle}>游客模式</Text>
+                <Text style={styles.guestTipTitle}>{t('profile.guestMode')}</Text>
               </View>
               <Text style={styles.guestTipText}>
-                您当前以游客身份登录，注册后可享受更多功能
+                {t('profile.guestTip')}
               </Text>
               <View style={styles.guestBenefits}>
-                <Text style={styles.guestBenefitItem}>✓ 数据云端保存</Text>
-                <Text style={styles.guestBenefitItem}>✓ 多设备同步</Text>
-                <Text style={styles.guestBenefitItem}>✓ 更多游戏剧本</Text>
-                <Text style={styles.guestBenefitItem}>✓ 专属会员特权</Text>
+                <Text style={styles.guestBenefitItem}>{t('profile.guestBenefit1')}</Text>
+                <Text style={styles.guestBenefitItem}>{t('profile.guestBenefit2')}</Text>
+                <Text style={styles.guestBenefitItem}>{t('profile.guestBenefit3')}</Text>
+                <Text style={styles.guestBenefitItem}>{t('profile.guestBenefit4')}</Text>
               </View>
               <GradientButton
-                title="立即注册"
+                title={t('profile.registerNow')}
                 onPress={handleRegisterFromGuest}
               />
             </View>
@@ -424,7 +491,7 @@ export const ProfileScreen: React.FC = () => {
           {editMode && (
             <View style={styles.buttonSection}>
               <GradientButton
-                title="保存修改"
+                title={t('profile.saveChanges')}
                 onPress={handleUpdateProfile}
                 loading={loading}
                 disabled={loading}
@@ -444,7 +511,7 @@ export const ProfileScreen: React.FC = () => {
               />
               <Feather name="log-out" size={20} color="#E74C3C" />
               <Text style={styles.logoutText}>
-                {isGuest ? '退出游客模式' : '退出登录'}
+                {isGuest ? t('profile.logoutGuest') : t('profile.logout')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -457,11 +524,10 @@ export const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A2E',
   },
   bubble: {
     position: 'absolute',
-    backgroundColor: 'rgba(139,71,137,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
   },
   header: {
     flexDirection: 'row',
@@ -481,12 +547,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(139,71,137,0.5)',
+    borderColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 8,
   },
@@ -496,12 +562,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#D4AF37',
+    color: '#FFFFFF',
     fontFamily: 'DancingScript_700Bold',
     letterSpacing: 1,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
   scrollView: {
     flex: 1,
@@ -530,7 +593,7 @@ const styles = StyleSheet.create({
     top: -10,
     left: -10,
     borderWidth: 2,
-    borderColor: 'rgba(139,71,137,0.6)',
+    borderColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
   },
   avatarRingGradient: {
@@ -541,7 +604,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#D4AF37',
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   avatarPlaceholder: {
     width: 120,
@@ -551,7 +614,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
     borderWidth: 3,
-    borderColor: '#D4AF37',
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   cameraIcon: {
     position: 'absolute',
@@ -564,10 +627,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#D4AF37',
-    shadowColor: '#8B4789',
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
@@ -577,7 +640,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(139,71,137,0.6)',
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   badgeGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -591,13 +654,12 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(139,71,137,0.4)',
+    borderColor: 'rgba(255,255,255,0.3)',
     padding: 20,
     marginBottom: 20,
-    backgroundColor: 'rgba(22,33,62,0.6)',
-    shadowColor: '#8B4789',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 10,
   },
@@ -612,12 +674,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 15,
-    color: 'rgba(212,175,55,0.9)',
+    color: 'rgba(255,255,255,0.85)',
     fontFamily: 'Poppins_600SemiBold',
   },
   infoValue: {
     fontSize: 15,
-    color: '#E8E8E8',
+    color: '#FFFFFF',
     fontWeight: '600',
     fontFamily: 'Poppins_600SemiBold',
   },
@@ -627,14 +689,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(139,71,137,0.5)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   inputGradient: {
     ...StyleSheet.absoluteFillObject,
   },
   infoInput: {
     fontSize: 15,
-    color: '#E8E8E8',
+    color: '#FFFFFF',
     fontWeight: '600',
     textAlign: 'right',
     paddingHorizontal: 12,
@@ -642,11 +704,64 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_600SemiBold',
   },
   lovePoints: {
-    color: '#D4AF37',
+    color: '#FFD700',
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(139,71,137,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  statsCard: {
+    borderRadius: 28,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  statsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+    fontFamily: 'DancingScript_700Bold',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statItem: {
+    flex: 1,
+    minWidth: '45%',
+    alignItems: 'center',
+    padding: 16,
+  },
+  statIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Poppins_700Bold',
+  },
+  statLabel: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: 'Poppins_400Regular',
   },
   buttonSection: {
     marginTop: 8,
@@ -656,13 +771,12 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: 'rgba(139,71,137,0.5)',
+    borderColor: 'rgba(255,255,255,0.4)',
     padding: 24,
     marginBottom: 20,
-    backgroundColor: 'rgba(22,33,62,0.6)',
-    shadowColor: '#8B4789',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 10,
   },
@@ -675,12 +789,12 @@ const styles = StyleSheet.create({
   guestTipTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#D4AF37',
+    color: '#FFFFFF',
     fontFamily: 'DancingScript_700Bold',
   },
   guestTipText: {
     fontSize: 15,
-    color: 'rgba(232,232,232,0.9)',
+    color: 'rgba(255,255,255,0.9)',
     marginBottom: 16,
     lineHeight: 22,
     fontFamily: 'Poppins_400Regular',
@@ -690,7 +804,7 @@ const styles = StyleSheet.create({
   },
   guestBenefitItem: {
     fontSize: 14,
-    color: 'rgba(232,232,232,0.85)',
+    color: 'rgba(255,255,255,0.85)',
     marginBottom: 8,
     lineHeight: 20,
     fontFamily: 'Poppins_400Regular',
@@ -706,19 +820,18 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingVertical: 16,
     borderWidth: 2,
-    borderColor: 'rgba(231,76,60,0.5)',
+    borderColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
-    backgroundColor: 'rgba(22,33,62,0.4)',
-    shadowColor: '#E74C3C',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 8,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#E74C3C',
+    color: '#FFFFFF',
     fontFamily: 'Poppins_700Bold',
   },
 });

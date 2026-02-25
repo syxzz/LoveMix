@@ -6,6 +6,7 @@
 // 导出子模块类型
 export * from './user';
 export * from './history';
+export * from './script';
 
 // 图片选择结果类型
 export interface ImagePickerResult {
@@ -64,10 +65,12 @@ export type RootStackParamList = {
   Register: undefined;
   ForgotPassword: undefined;
   Home: undefined;
-  FaceMerge: undefined;
-  Card: undefined;
-  Date: undefined;
-  Sticker: undefined;
+  ScriptDetail: { scriptId: string };
+  Game: { scriptId: string; characterId: string };
+  Clue: undefined;
+  Dialog: { characterId?: string; scriptId: string };
+  Vote: undefined;
+  Result: { success: boolean };
   Settings: undefined;
   Profile: undefined;
   History: undefined;

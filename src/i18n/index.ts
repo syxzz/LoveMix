@@ -6,11 +6,11 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import zh from './locales/zh';
-import en from './locales/en';
-import ja from './locales/ja';
+import zh from './locales/zh-script';
+import en from './locales/en-script';
+import ja from './locales/ja-script';
 
-const LANGUAGE_KEY = '@lovemix_language';
+const LANGUAGE_KEY = '@script_mystery_language';
 
 // 语言资源
 const resources = {

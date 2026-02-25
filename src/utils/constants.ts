@@ -1,22 +1,25 @@
 /**
  * 应用常量配置
- * 包含颜色、尺寸、场景选项等所有常量
+ * 包含颜色、尺寸、游戏配置等所有常量
  */
 
-import { SceneOption, QuickTag } from '../types';
-
-// 颜色常量
+// 颜色常量 - 剧本杀悬疑主题
 export const COLORS = {
-  primary: '#FF69B4',
-  secondary: '#87CEEB',
-  background: '#FFFFFF',
-  cardBg: '#F8F9FA',
-  textDark: '#2C3E50',
-  textLight: '#FFFFFF',
-  textGray: '#6C757D',
-  border: '#E0E0E0',
-  error: '#FF6B6B',
-  success: '#51CF66',
+  primary: '#8B4789',      // 神秘紫
+  secondary: '#2C3E50',    // 深蓝灰
+  accent: '#D4AF37',       // 金色
+  background: '#1A1A2E',   // 深色背景
+  cardBg: '#16213E',       // 卡片背景
+  textDark: '#E8E8E8',     // 浅色文字
+  textLight: '#FFFFFF',    // 白色文字
+  textGray: '#A0A0A0',     // 灰色文字
+  border: '#3A3A52',       // 边框色
+  error: '#E74C3C',        // 错误红
+  success: '#27AE60',      // 成功绿
+  warning: '#F39C12',      // 警告橙
+  clueImportant: '#E74C3C', // 重要线索
+  clueKey: '#F39C12',      // 关键线索
+  clueNormal: '#3498DB',   // 普通线索
 };
 
 // 圆角常量
@@ -54,55 +57,27 @@ export const ICON_SIZES = {
   xlarge: 72,
 };
 
-// 虚拟约会场景选项
-export const DATE_SCENES: SceneOption[] = [
-  { id: 'sunset', emoji: '🌅', label: '海边日落' },
-  { id: 'cafe', emoji: '☕', label: '浪漫咖啡馆' },
-  { id: 'camping', emoji: '⭐', label: '星空露营' },
-  { id: 'home', emoji: '🏠', label: '未来之家' },
-  { id: 'sakura', emoji: '🌸', label: '樱花树下' },
-  { id: 'beach', emoji: '🏖️', label: '沙滩漫步' },
+// 游戏难度等级
+export const DIFFICULTY_LEVELS = [
+  { id: 'easy', label: '简单', color: '#27AE60' },
+  { id: 'medium', label: '中等', color: '#F39C12' },
+  { id: 'hard', label: '困难', color: '#E74C3C' },
 ];
 
-// 表情包快捷标签
-export const QUICK_TAGS: QuickTag[] = [
-  { id: '1', text: '想你', emoji: '❤️' },
-  { id: '2', text: '晚安', emoji: '🌙' },
-  { id: '3', text: '抱抱', emoji: '🤗' },
-  { id: '4', text: '生气', emoji: '😤' },
-  { id: '5', text: '亲亲', emoji: '😘' },
+// 游戏阶段
+export const GAME_PHASES = [
+  { id: 'intro', label: '开场介绍', icon: '📖' },
+  { id: 'search', label: '搜证阶段', icon: '🔍' },
+  { id: 'discuss', label: '讨论阶段', icon: '💬' },
+  { id: 'vote', label: '投票阶段', icon: '🗳️' },
+  { id: 'result', label: '结果揭晓', icon: '🎭' },
 ];
 
-// 首页功能卡片数据
-export const HOME_FEATURES = [
-  {
-    id: 'merge',
-    emoji: '💑',
-    title: 'AI头像融合',
-    description: '生成未来宝宝或情侣头像',
-    screen: 'FaceMerge',
-  },
-  {
-    id: 'card',
-    emoji: '🎂',
-    title: '纪念日卡片',
-    description: '定制专属祝福卡片',
-    screen: 'Card',
-  },
-  {
-    id: 'date',
-    emoji: '🌅',
-    title: '虚拟约会',
-    description: '如果我们在一起',
-    screen: 'Date',
-  },
-  {
-    id: 'sticker',
-    emoji: '😊',
-    title: '表情包工坊',
-    description: '聊天内容变表情',
-    screen: 'Sticker',
-  },
+// 线索类型
+export const CLUE_TYPES = [
+  { id: 'key', label: '关键线索', color: '#F39C12', icon: '⭐' },
+  { id: 'important', label: '重要线索', color: '#E74C3C', icon: '❗' },
+  { id: 'normal', label: '普通线索', color: '#3498DB', icon: '📝' },
 ];
 
 // 动画配置
@@ -114,8 +89,8 @@ export const ANIMATION = {
 
 // 存储键名
 export const STORAGE_KEYS = {
-  REPLICATE_KEY: 'replicate_api_key',
   OPENAI_KEY: 'openai_api_key',
-  LOVE_POINTS: 'love_points',
-  GENERATION_HISTORY: 'generation_history',
+  GAME_PROGRESS: 'game_progress',
+  COMPLETED_SCRIPTS: 'completed_scripts',
+  USER_STATS: 'user_stats',
 };
