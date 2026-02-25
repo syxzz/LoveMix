@@ -66,6 +66,7 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   Home: undefined;
   ScriptDetail: { scriptId: string };
+  ScriptGenerator: undefined;
   Game: { scriptId: string; characterId: string };
   Clue: undefined;
   Dialog: { characterId?: string; scriptId: string };

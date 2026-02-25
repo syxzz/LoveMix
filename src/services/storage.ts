@@ -6,7 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { STORAGE_KEYS } from '../utils/constants';
-import { GameProgress, APIKeys } from '../types';
+import { GameProgress, APIKeys, Script } from '../types';
 
 /**
  * 保存API密钥（加密存储）- 兼容旧版本
@@ -170,5 +170,58 @@ export const getUserStats = async (): Promise<{
   } catch (error) {
     console.error('Error getting user stats:', error);
     return { gamesPlayed: 0, successCount: 0, successRate: 0 };
+  }
+};
+
+/**
+ * 保存自定义剧本
+ */
+export const saveCustomScript = async (script: Script): Promise<void> => {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_SCRIPTS);
+    const scripts = data ? JSON.parse(data) : [];
+
+    // 检查是否已存在，如果存在则更新
+    const existingIndex = scripts.findIndex((s: Script) => s.id === script.id);
+    if (existingIndex >= 0) {
+      scripts[existingIndex] = script;
+    } else {
+      scripts.push(script);
+    }
+
+    await AsyncStorage.setItem(STORAGE_KEYS.CUSTOM_SCRIPTS, JSON.stringify(scripts));
+    console.log('✅ 自定义剧本已保存:', script.title);
+  } catch (error) {
+    console.error('Error saving custom script:', error);
+    throw error;
+  }
+};
+
+/**
+ * 获取所有自定义剧本
+ */
+export const getCustomScripts = async (): Promise<Script[]> => {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_SCRIPTS);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error getting custom scripts:', error);
+    return [];
+  }
+};
+
+/**
+ * 删除自定义剧本
+ */
+export const deleteCustomScript = async (scriptId: string): Promise<void> => {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_SCRIPTS);
+    const scripts = data ? JSON.parse(data) : [];
+    const filtered = scripts.filter((s: Script) => s.id !== scriptId);
+    await AsyncStorage.setItem(STORAGE_KEYS.CUSTOM_SCRIPTS, JSON.stringify(filtered));
+    console.log('✅ 自定义剧本已删除:', scriptId);
+  } catch (error) {
+    console.error('Error deleting custom script:', error);
+    throw error;
   }
 };

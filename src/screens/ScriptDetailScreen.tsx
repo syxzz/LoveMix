@@ -46,7 +46,7 @@ export const ScriptDetailScreen: React.FC = () => {
   }, [scriptId]);
 
   const loadScript = async () => {
-    const scriptData = getScriptById(scriptId);
+    const scriptData = await getScriptById(scriptId);
     if (scriptData) {
       setScript(scriptData);
 

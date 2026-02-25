@@ -119,7 +119,7 @@ export const GameScreen: React.FC = () => {
 
   const loadGame = async () => {
     try {
-      const scriptData = getScriptById(scriptId);
+      const scriptData = await getScriptById(scriptId);
       if (!scriptData) {
         Alert.alert(t('common.error'), '剧本未找到');
         navigation.goBack();

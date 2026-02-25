@@ -41,7 +41,7 @@ export const HomeScreen: React.FC = () => {
   }, []);
 
   const loadScripts = async () => {
-    const allScripts = getAllScripts();
+    const allScripts = await getAllScripts();
     setScripts(allScripts);
 
     // 加载进度和完成状态
@@ -69,6 +69,10 @@ export const HomeScreen: React.FC = () => {
 
   const handleSettingsPress = () => {
     navigation.navigate('Settings');
+  };
+
+  const handleCreateScript = () => {
+    navigation.navigate('ScriptGenerator');
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -125,6 +129,26 @@ export const HomeScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* 创建剧本按钮 */}
+        <TouchableOpacity
+          style={styles.createScriptCard}
+          onPress={handleCreateScript}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={[COLORS.accent, COLORS.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.createCardGradient}
+          >
+            <Feather name="plus-circle" size={48} color={COLORS.textLight} />
+            <Text style={styles.createScriptTitle}>AI 生成剧本</Text>
+            <Text style={styles.createScriptSubtitle}>
+              让 AI 为你创作专属剧本
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
         {scripts.map((script) => {
           const hasProgress = !!progressMap[script.id];
           const isCompleted = !!completedMap[script.id];
@@ -258,6 +282,29 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
+  },
+  createScriptCard: {
+    borderRadius: RADIUS.large,
+    marginBottom: SPACING.lg,
+    overflow: 'hidden',
+    height: 160,
+  },
+  createCardGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  createScriptTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
+    marginTop: SPACING.sm,
+  },
+  createScriptSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 4,
   },
   scriptCard: {
     borderRadius: RADIUS.large,

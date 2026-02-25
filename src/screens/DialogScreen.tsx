@@ -115,7 +115,7 @@ export const DialogScreen: React.FC = () => {
         return;
       }
 
-      const scriptData = getScriptById(progress.scriptId);
+      const scriptData = await getScriptById(progress.scriptId);
       if (!scriptData) {
         Alert.alert('错误', '未找到剧本');
         navigation.goBack();

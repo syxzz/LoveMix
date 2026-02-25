@@ -4,6 +4,7 @@
  */
 
 import { Script } from '../types';
+import { getCustomScripts } from '../services/storage';
 
 export const SAMPLE_SCRIPTS: Script[] = [
   {
@@ -179,19 +180,37 @@ export const SAMPLE_SCRIPTS: Script[] = [
   },
 ];
 
-// 根据ID获取剧本
-export const getScriptById = (id: string): Script | undefined => {
+// 根据ID获取剧本（包含自定义剧本）
+export const getScriptById = async (id: string): Promise<Script | undefined> => {
+  // 先在内置剧本中查找
+  const builtInScript = SAMPLE_SCRIPTS.find(script => script.id === id);
+  if (builtInScript) return builtInScript;
+
+  // 再在自定义剧本中查找
+  const customScripts = await getCustomScripts();
+  return customScripts.find(script => script.id === id);
+};
+
+// 同步获取剧本（仅内置剧本）
+export const getScriptByIdSync = (id: string): Script | undefined => {
   return SAMPLE_SCRIPTS.find(script => script.id === id);
 };
 
-// 获取所有剧本
-export const getAllScripts = (): Script[] => {
+// 获取所有剧本（包含自定义剧本）
+export const getAllScripts = async (): Promise<Script[]> => {
+  const customScripts = await getCustomScripts();
+  // 自定义剧本排在前面
+  return [...customScripts, ...SAMPLE_SCRIPTS];
+};
+
+// 同步获取所有剧本（仅内置剧本）
+export const getAllScriptsSync = (): Script[] => {
   return SAMPLE_SCRIPTS;
 };
 
 // 获取剧本（包含动态生成的封面）
 export const getScriptByIdWithCover = async (id: string): Promise<Script | undefined> => {
-  const script = getScriptById(id);
+  const script = await getScriptById(id);
   if (!script) return undefined;
 
   // 如果没有预设封面，尝试从缓存或生成

@@ -28,6 +28,7 @@ import {
   CommunityScreen,
 } from './src/screens';
 import { ScriptDetailScreen } from './src/screens/ScriptDetailScreen';
+import { ScriptGeneratorScreen } from './src/screens/ScriptGeneratorScreen';
 import { GameScreen } from './src/screens/GameScreen';
 import { ClueScreen } from './src/screens/ClueScreen';
 import { DialogScreen } from './src/screens/DialogScreen';
@@ -42,7 +43,7 @@ import { USE_FIREBASE } from './src/config';
 import './src/i18n'; // 初始化 i18n
 import { loadLanguage } from './src/i18n';
 import { initializeAllScriptCovers, preloadCoverCache, initializeScriptCharacterAvatars } from './src/services/scriptInit';
-import { getAllScripts } from './src/data/scripts';
+import { getAllScripts, getAllScriptsSync } from './src/data/scripts';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -78,7 +79,7 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       await preloadCoverCache();
 
       // 后台静默初始化，不阻塞应用启动
-      const scripts = getAllScripts();
+      const scripts = await getAllScripts();
 
       // 初始化封面和角色头像
       for (const script of scripts) {
@@ -144,6 +145,7 @@ const Navigation: React.FC = () => {
       {/* 主应用页面 */}
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="ScriptDetail" component={ScriptDetailScreen} />
+      <Stack.Screen name="ScriptGenerator" component={ScriptGeneratorScreen} />
       <Stack.Screen name="Game" component={GameScreen} />
       <Stack.Screen name="Clue" component={ClueScreen} />
       <Stack.Screen name="Dialog" component={DialogScreen} />

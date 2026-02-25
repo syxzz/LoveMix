@@ -11,6 +11,17 @@ export type GamePhase = 'intro' | 'search' | 'discuss' | 'vote' | 'result';
 // 线索类型
 export type ClueType = 'key' | 'important' | 'normal';
 
+// 剧本类型/题材
+export type ScriptGenre =
+  | 'ancient_romance'      // 古装爱情
+  | 'modern_urban'         // 现代都市
+  | 'horror_thriller'      // 惊悚恐怖
+  | 'fantasy_wuxia'        // 玄幻武侠
+  | 'sci_fi'               // 科幻未来
+  | 'historical_mystery'   // 历史悬疑
+  | 'campus_youth'         // 校园青春
+  | 'business_intrigue';   // 商战谍战
+
 // 角色信息
 export interface Character {
   id: string;
@@ -50,6 +61,9 @@ export interface Script {
   murderer: string; // 凶手角色ID
   motive: string; // 作案动机
   truth: string; // 完整真相
+  genre?: ScriptGenre; // 剧本类型
+  isCustom?: boolean; // 是否为用户生成的剧本
+  createdAt?: number; // 创建时间戳
 }
 
 // 游戏进度

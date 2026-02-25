@@ -4,7 +4,7 @@
  * 支持思考链功能和流式输出
  */
 
-import { Character, Message, Script } from '../types';
+import { Character, Message, Script, ScriptGenre } from '../types';
 import { getAPIKey } from './storage';
 import { fetch as fetchPolyfill } from 'react-native-fetch-api';
 
@@ -900,5 +900,169 @@ export const testAPIConnection = async (): Promise<{
         error: error.toString(),
       },
     };
+  }
+};
+
+// 剧本类型的中文描述
+const GENRE_DESCRIPTIONS: Record<ScriptGenre, string> = {
+  ancient_romance: '古装爱情 - 宫廷恩怨、江湖情仇、才子佳人',
+  modern_urban: '现代都市 - 职场争斗、豪门恩怨、都市悬疑',
+  horror_thriller: '惊悚恐怖 - 密室逃脱、灵异事件、心理惊悚',
+  fantasy_wuxia: '玄幻武侠 - 江湖门派、武林秘籍、侠义恩仇',
+  sci_fi: '科幻未来 - 太空探索、人工智能、未来世界',
+  historical_mystery: '历史悬疑 - 历史谜案、朝堂权谋、古代探案',
+  campus_youth: '校园青春 - 校园悬案、青春秘密、学生推理',
+  business_intrigue: '商战谍战 - 商业阴谋、间谍暗战、企业争斗',
+};
+
+// 生成剧本（支持流式输出）
+export const generateScript = async (
+  genre: ScriptGenre,
+  onProgress?: (stage: string, progress: number) => void
+): Promise<Script> => {
+  try {
+    console.log('🎬 开始生成剧本，类型:', genre);
+
+    const genreDesc = GENRE_DESCRIPTIONS[genre];
+
+    // 阶段 1: 生成剧本基本信息
+    onProgress?.('生成剧本框架...', 0.1);
+
+    const systemPrompt = `你是一个专业的剧本杀剧本创作大师，擅长创作引人入胜的推理剧本。
+你需要根据用户选择的题材，创作一个完整的剧本杀剧本。
+
+要求：
+1. 剧本必须包含完整的故事背景、角色设定、线索设计
+2. 必须有明确的凶手和作案动机
+3. 线索设计要合理，既不能太简单也不能太复杂
+4. 角色性格要鲜明，每个人都有秘密和目标
+5. 故事要有悬念和反转
+
+请直接输出 JSON 格式的剧本数据，不要有任何其他说明文字。`;
+
+    const userPrompt = `请创作一个${genreDesc}题材的剧本杀剧本。
+
+要求：
+- 6个角色，每个角色都有独特的背景、性格、秘密和目标
+- 8-10条线索，包括关键线索、重要线索和普通线索
+- 明确的凶手和作案动机
+- 完整的真相揭示
+
+请按以下 JSON 格式输出（必须是有效的 JSON）：
+
+{
+  "title": "剧本标题",
+  "description": "剧本简介（50字以内）",
+  "difficulty": "medium",
+  "duration": "60-90分钟",
+  "storyBackground": "故事背景（200字左右）",
+  "characters": [
+    {
+      "name": "角色姓名",
+      "age": 30,
+      "gender": "男/女",
+      "occupation": "职业",
+      "personality": "性格特点",
+      "background": "角色背景（100字）",
+      "secret": "角色秘密（50字）",
+      "goal": "角色目标（50字）"
+    }
+  ],
+  "clues": [
+    {
+      "name": "线索名称",
+      "type": "key/important/normal",
+      "location": "发现地点",
+      "description": "线索描述（50字）"
+    }
+  ],
+  "murdererIndex": 0,
+  "motive": "作案动机（100字）",
+  "truth": "完整真相（300字）"
+}
+
+注意：
+1. murdererIndex 是凶手在 characters 数组中的索引（0-5）
+2. 至少要有 2 条 key 类型线索，3 条 important 类型线索
+3. 确保输出的是纯 JSON，不要有任何 markdown 标记或其他文字`;
+
+    const messages: Message[] = [
+      {
+        id: '1',
+        role: 'user',
+        content: userPrompt,
+        timestamp: Date.now(),
+      },
+    ];
+
+    onProgress?.('AI 正在创作剧本...', 0.3);
+
+    const result = await sendMessageToAI(messages, systemPrompt, {
+      enableReasoning: false,
+      temperature: 0.9, // 提高创意性
+      maxTokens: 4000, // 增加 token 限制以容纳完整剧本
+    });
+
+    console.log('📝 AI 返回内容长度:', result.content.length);
+
+    onProgress?.('解析剧本数据...', 0.7);
+
+    // 解析 JSON（处理可能的 markdown 代码块）
+    let jsonContent = result.content.trim();
+
+    // 移除可能的 markdown 代码块标记
+    if (jsonContent.startsWith('```json')) {
+      jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (jsonContent.startsWith('```')) {
+      jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
+    const scriptData = JSON.parse(jsonContent);
+
+    onProgress?.('构建剧本对象...', 0.9);
+
+    // 构建完整的 Script 对象
+    const script: Script = {
+      id: `custom_${Date.now()}`,
+      title: scriptData.title,
+      description: scriptData.description,
+      difficulty: scriptData.difficulty || 'medium',
+      duration: scriptData.duration || '60-90分钟',
+      characterCount: scriptData.characters.length,
+      storyBackground: scriptData.storyBackground,
+      characters: scriptData.characters.map((char: any, index: number) => ({
+        id: `char_${index + 1}`,
+        name: char.name,
+        age: char.age,
+        gender: char.gender,
+        occupation: char.occupation,
+        personality: char.personality,
+        background: char.background,
+        secret: char.secret,
+        goal: char.goal,
+      })),
+      clues: scriptData.clues.map((clue: any, index: number) => ({
+        id: `clue_${index + 1}`,
+        name: clue.name,
+        type: clue.type,
+        location: clue.location,
+        description: clue.description,
+        discovered: false,
+      })),
+      murderer: `char_${scriptData.murdererIndex + 1}`,
+      motive: scriptData.motive,
+      truth: scriptData.truth,
+      genre,
+      isCustom: true,
+      createdAt: Date.now(),
+    };
+
+    onProgress?.('剧本生成完成！', 1.0);
+
+    console.log('✅ 剧本生成成功:', script.title);
+    return script;
+  } catch (error: any) {
+    console.error('❌ 生成剧本失败:', error);
+    throw new Error(`生成剧本失败: ${error.message}`);
   }
 };

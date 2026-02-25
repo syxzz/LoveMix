@@ -93,4 +93,5 @@ export const STORAGE_KEYS = {
   GAME_PROGRESS: 'game_progress',
   COMPLETED_SCRIPTS: 'completed_scripts',
   USER_STATS: 'user_stats',
+  CUSTOM_SCRIPTS: 'custom_scripts',
 };
