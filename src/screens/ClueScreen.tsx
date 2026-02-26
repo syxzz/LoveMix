@@ -9,40 +9,49 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { RootStackParamList, Clue } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
+import { getScriptById } from '../data/scripts';
 import { Feather } from '@expo/vector-icons';
 
+type ClueScreenRouteProp = RouteProp<RootStackParamList, 'Clue'>;
 type ClueScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Clue'>;
 
 export const ClueScreen: React.FC = () => {
   const navigation = useNavigation<ClueScreenNavigationProp>();
+  const route = useRoute<ClueScreenRouteProp>();
   const { t } = useTranslation();
+  const { scriptId } = route.params;
 
-  // 示例线索数据（实际应从游戏进度中获取）
-  const [clues, setClues] = useState<Clue[]>([
-    {
-      id: 'clue_1',
-      name: '毒药瓶',
-      type: 'key',
-      location: '书房',
-      description: '在书房的抽屉里发现了一个空的毒药瓶，上面有指纹。',
+  const [clues, setClues] = useState<Clue[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadClues();
+  }, []);
+
+  const loadClues = async () => {
+    const script = await getScriptById(scriptId);
+    if (!script) {
+      setLoading(false);
+      return;
+    }
+
+    // 搜证阶段展示所有线索供玩家推理
+    const allClues = script.clues.map(clue => ({
+      ...clue,
       discovered: true,
-    },
-    {
-      id: 'clue_2',
-      name: '遗嘱草稿',
-      type: 'important',
-      location: '卧室',
-      description: '威廉最近修改的遗嘱草稿，显示他打算把大部分财产留给"L.R."。',
-      discovered: true,
-    },
-  ]);
+    }));
+
+    setClues(allClues);
+    setLoading(false);
+  };
 
   const getClueTypeColor = (type: string) => {
     switch (type) {
@@ -71,6 +80,14 @@ export const ClueScreen: React.FC = () => {
   };
 
   const discoveredClues = clues.filter(c => c.discovered);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

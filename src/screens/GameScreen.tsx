@@ -19,12 +19,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { useSetAtom } from 'jotai';
 import { RootStackParamList, Script, Character, GameProgress, GamePhase } from '../types';
 import { COLORS, SPACING, RADIUS, GAME_PHASES } from '../utils/constants';
 import { getScriptById } from '../data/scripts';
 import { getGameProgress, saveGameProgress } from '../services/storage';
 import { generateIntroduction } from '../services/ai';
 import { ensureIntroductionImage, getCachedIntroImageSync } from '../services/scriptInit';
+import { startVideoGeneration, cleanupVideoTask } from '../services/videoGeneration';
+import { videoTaskAtom } from '../store';
 import { Feather } from '@expo/vector-icons';
 
 type GameScreenRouteProp = RouteProp<RootStackParamList, 'Game'>;
@@ -46,6 +49,7 @@ export const GameScreen: React.FC = () => {
   const [discoveredCluesCount, setDiscoveredCluesCount] = useState(0);
   const [introImage, setIntroImage] = useState<string | null>(null); // 开场场景图片
   const [isLoadingIntroImage, setIsLoadingIntroImage] = useState(false);
+  const setVideoTask = useSetAtom(videoTaskAtom);
 
   // 加载动画
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -56,6 +60,9 @@ export const GameScreen: React.FC = () => {
 
   useEffect(() => {
     loadGame();
+    return () => {
+      cleanupVideoTask();
+    };
   }, []);
 
   // 加载动画效果
@@ -135,7 +142,12 @@ export const GameScreen: React.FC = () => {
 
       setScript(scriptData);
       setCharacter(characterData);
-      setLoading(false); // 立即停止加载，显示页面
+      setLoading(false);
+
+      // 异步启动视频生成（不阻塞游戏流程）
+      startVideoGeneration(scriptData, (state) => {
+        setVideoTask(state);
+      });
 
       // 加载开场场景图片
       loadIntroImage(scriptData, characterData);
@@ -251,7 +263,7 @@ export const GameScreen: React.FC = () => {
   };
 
   const handleViewClues = () => {
-    navigation.navigate('Clue');
+    navigation.navigate('Clue', { scriptId });
   };
 
   const handleDialog = (targetCharacterId?: string) => {
@@ -262,7 +274,7 @@ export const GameScreen: React.FC = () => {
   };
 
   const handleVote = () => {
-    navigation.navigate('Vote');
+    navigation.navigate('Vote', { scriptId });
   };
 
   const handleViewCharacter = () => {

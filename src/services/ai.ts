@@ -915,6 +915,116 @@ const GENRE_DESCRIPTIONS: Record<ScriptGenre, string> = {
   business_intrigue: '商战谍战 - 商业阴谋、间谍暗战、企业争斗',
 };
 
+/**
+ * 从 AI 返回的文本中提取 JSON 对象
+ * 处理 markdown 代码块、前后多余文字、截断等情况
+ */
+function extractJSON(text: string): any {
+  let content = text.trim();
+
+  // 1. 提取 ```json ... ``` 或 ``` ... ``` 代码块
+  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    content = codeBlockMatch[1].trim();
+  }
+
+  // 2. 直接尝试解析
+  try {
+    return JSON.parse(content);
+  } catch (e: any) {
+    console.log('📋 [extractJSON] 直接解析失败:', e.message);
+  }
+
+  // 3. 用大括号配对找到完整 JSON 对象
+  const firstBrace = content.indexOf('{');
+  if (firstBrace === -1) {
+    console.log('📋 [extractJSON] 未找到 {，内容前200字符:', content.slice(0, 200));
+    throw new Error('无法从 AI 返回内容中提取有效的 JSON 数据');
+  }
+
+  // 用配对的方式找到正确的闭合 }
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let endPos = -1;
+
+  for (let i = firstBrace; i < content.length; i++) {
+    const ch = content[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === '\\' && inString) {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === '{') depth++;
+    if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        endPos = i;
+        break;
+      }
+    }
+  }
+
+  if (endPos === -1) {
+    // JSON 被截断，尝试补全
+    console.log('📋 [extractJSON] JSON 未闭合，尝试补全...');
+    let truncated = content.slice(firstBrace);
+    // 补全缺失的引号
+    const quoteCount = (truncated.match(/(?<!\\)"/g) || []).length;
+    if (quoteCount % 2 !== 0) {
+      truncated += '"';
+    }
+    // 补全缺失的括号
+    while (depth > 0) {
+      // 检查最后打开的是 [ 还是 {
+      const lastOpen = Math.max(truncated.lastIndexOf('['), truncated.lastIndexOf('{'));
+      const lastClose = Math.max(truncated.lastIndexOf(']'), truncated.lastIndexOf('}'));
+      if (lastOpen > lastClose) {
+        truncated += truncated[lastOpen] === '[' ? ']' : '}';
+      } else {
+        truncated += '}';
+      }
+      depth--;
+    }
+    try {
+      return JSON.parse(truncated);
+    } catch (e: any) {
+      console.log('📋 [extractJSON] 补全后仍失败:', e.message);
+    }
+  }
+
+  if (endPos !== -1) {
+    const jsonStr = content.slice(firstBrace, endPos + 1);
+    try {
+      return JSON.parse(jsonStr);
+    } catch (e: any) {
+      console.log('📋 [extractJSON] 配对提取失败:', e.message);
+
+      // 修复常见问题：尾部多余逗号、控制字符
+      let fixed = jsonStr
+        .replace(/,\s*([\]}])/g, '$1')
+        .replace(/[\x00-\x1f\x7f]/g, (ch) => ch === '\n' || ch === '\r' || ch === '\t' ? ch : '');
+      try {
+        return JSON.parse(fixed);
+      } catch (e2: any) {
+        console.log('📋 [extractJSON] 修复后仍失败:', e2.message);
+        console.log('📋 [extractJSON] JSON 前200字符:', jsonStr.slice(0, 200));
+        console.log('📋 [extractJSON] JSON 后200字符:', jsonStr.slice(-200));
+      }
+    }
+  }
+
+  throw new Error('无法从 AI 返回内容中提取有效的 JSON 数据');
+}
+
 // 生成剧本（支持流式输出）
 export const generateScript = async (
   genre: ScriptGenre,
@@ -999,25 +1109,15 @@ export const generateScript = async (
 
     const result = await sendMessageToAI(messages, systemPrompt, {
       enableReasoning: false,
-      temperature: 0.9, // 提高创意性
-      maxTokens: 4000, // 增加 token 限制以容纳完整剧本
+      temperature: 0.9,
+      maxTokens: 8000,
     });
 
     console.log('📝 AI 返回内容长度:', result.content.length);
 
     onProgress?.('解析剧本数据...', 0.7);
 
-    // 解析 JSON（处理可能的 markdown 代码块）
-    let jsonContent = result.content.trim();
-
-    // 移除可能的 markdown 代码块标记
-    if (jsonContent.startsWith('```json')) {
-      jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (jsonContent.startsWith('```')) {
-      jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-
-    const scriptData = JSON.parse(jsonContent);
+    const scriptData = extractJSON(result.content);
 
     onProgress?.('构建剧本对象...', 0.9);
 

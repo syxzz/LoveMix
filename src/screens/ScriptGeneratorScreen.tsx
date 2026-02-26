@@ -21,6 +21,7 @@ import { RootStackParamList, ScriptGenre } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { generateScript } from '../services/ai';
 import { saveCustomScript } from '../services/storage';
+import { generateVideoInBackground } from '../services/videoGeneration';
 import { Feather } from '@expo/vector-icons';
 
 type ScriptGeneratorNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -112,6 +113,9 @@ export const ScriptGeneratorScreen: React.FC = () => {
 
       // 保存到本地
       await saveCustomScript(script);
+
+      // 后台预生成场景还原视频
+      generateVideoInBackground(script);
 
       Alert.alert(
         '生成成功！',

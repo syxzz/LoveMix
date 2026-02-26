@@ -44,6 +44,7 @@ import { USE_FIREBASE } from './src/config';
 import './src/i18n'; // 初始化 i18n
 import { loadLanguage } from './src/i18n';
 import { initializeAllScriptCovers, preloadCoverCache, initializeScriptCharacterAvatars } from './src/services/scriptInit';
+import { generateVideoInBackground } from './src/services/videoGeneration';
 import { getAllScripts, getAllScriptsSync } from './src/data/scripts';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -82,15 +83,13 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       // 后台静默初始化，不阻塞应用启动
       const scripts = await getAllScripts();
 
-      // 初始化封面和角色头像
       for (const script of scripts) {
-        // 初始化封面
         initializeAllScriptCovers([script]);
-
-        // 初始化角色头像
         initializeScriptCharacterAvatars(script);
 
-        // 避免同时发起太多请求
+        // 后台预生成场景还原视频
+        generateVideoInBackground(script);
+
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (error) {

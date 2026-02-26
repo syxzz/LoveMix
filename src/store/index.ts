@@ -5,6 +5,7 @@
 
 import { atom } from 'jotai';
 import { APIKeys, GenerationResult, User, WorkHistory } from '../types';
+import { VideoTaskState } from '../services/videoGeneration';
 
 /**
  * 用户认证状态
@@ -42,3 +43,13 @@ export const loadingAtom = atom<boolean>(false);
  * 当前选中的Tab
  */
 export const currentTabAtom = atom<string>('home');
+
+/**
+ * 视频生成任务状态（跨屏幕共享）
+ */
+export const videoTaskAtom = atom<VideoTaskState>({
+  taskId: null,
+  status: 'idle',
+  videoUrl: null,
+  error: null,
+});

@@ -68,11 +68,11 @@ export type RootStackParamList = {
   ScriptDetail: { scriptId: string };
   ScriptGenerator: undefined;
   Game: { scriptId: string; characterId: string };
-  Clue: undefined;
+  Clue: { scriptId: string };
   Dialog: { characterId?: string; scriptId: string };
   GroupDiscuss: { scriptId: string };
-  Vote: undefined;
-  Result: { success: boolean };
+  Vote: { scriptId: string };
+  Result: { success: boolean; scriptId: string };
   Settings: undefined;
   Profile: undefined;
   History: undefined;

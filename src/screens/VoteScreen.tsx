@@ -2,7 +2,7 @@
  * VoteScreen - 投票页面
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,52 +11,45 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { RootStackParamList, Character } from '../types';
+import { RootStackParamList, Character, Script } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
+import { getScriptById } from '../data/scripts';
 import { Feather } from '@expo/vector-icons';
 
+type VoteScreenRouteProp = RouteProp<RootStackParamList, 'Vote'>;
 type VoteScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Vote'>;
 
 export const VoteScreen: React.FC = () => {
   const navigation = useNavigation<VoteScreenNavigationProp>();
+  const route = useRoute<VoteScreenRouteProp>();
   const { t } = useTranslation();
+  const { scriptId } = route.params;
 
-  // 示例角色数据
-  const characters: Character[] = [
-    {
-      id: 'char_1',
-      name: '艾米丽·布莱克',
-      age: 28,
-      gender: '女',
-      occupation: '艺术家',
-      personality: '敏感、细腻',
-      background: '威廉的女儿',
-      secret: '',
-      goal: '',
-    },
-    {
-      id: 'char_2',
-      name: '詹姆斯·格林',
-      age: 45,
-      gender: '男',
-      occupation: '商业伙伴',
-      personality: '精明、冷静',
-      background: '威廉的商业伙伴',
-      secret: '',
-      goal: '',
-    },
-  ];
-
+  const [script, setScript] = useState<Script | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
+  useEffect(() => {
+    loadScript();
+  }, []);
+
+  const loadScript = async () => {
+    const data = await getScriptById(scriptId);
+    setScript(data || null);
+    setLoading(false);
+  };
+
+  const characters = script?.characters || [];
+
   const handleConfirmVote = () => {
-    if (!selectedCharacterId) {
+    if (!selectedCharacterId || !script) {
       Alert.alert(t('common.error'), '请选择一个嫌疑人');
       return;
     }
@@ -69,15 +62,21 @@ export const VoteScreen: React.FC = () => {
         {
           text: t('common.confirm'),
           onPress: () => {
-            // 这里应该保存投票结果并跳转到结果页面
-            const selectedCharacter = characters.find(c => c.id === selectedCharacterId);
-            const isCorrect = selectedCharacterId === 'char_5'; // 假设char_5是凶手
-            navigation.navigate('Result', { success: isCorrect });
+            const isCorrect = selectedCharacterId === script.murderer;
+            navigation.navigate('Result', { success: isCorrect, scriptId });
           },
         },
       ]
     );
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
