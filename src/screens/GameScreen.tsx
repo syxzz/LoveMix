@@ -450,7 +450,7 @@ export const GameScreen: React.FC = () => {
                 >
                   <Feather name="search" size={24} color={COLORS.textLight} />
                   <Text style={styles.actionButtonText}>
-                    {t('game.viewClues')} ({discoveredCluesCount}/{script.clues.length})
+                    {t('game.viewClues')}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -466,7 +466,7 @@ export const GameScreen: React.FC = () => {
                   style={styles.actionButtonGradient}
                 >
                   <Feather name="message-circle" size={24} color={COLORS.textLight} />
-                  <Text style={styles.actionButtonText}>{t('game.talkTo')} DM</Text>
+                  <Text style={styles.actionButtonText}>开始搜证</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </>

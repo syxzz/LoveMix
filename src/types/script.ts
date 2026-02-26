@@ -74,6 +74,7 @@ export interface GameProgress {
   currentPhase: GamePhase;
   discoveredClues: string[]; // 已发现的线索ID列表
   conversationHistory: Message[];
+  intels?: Intel[]; // 已知情报列表
   votedCharacterId?: string;
   completed: boolean;
   success?: boolean;
@@ -94,4 +95,16 @@ export interface VoteOption {
   characterId: string;
   characterName: string;
   reason?: string;
+}
+
+// 情报类型
+export type IntelType = 'character' | 'item';
+
+// 情报信息
+export interface Intel {
+  id: string;
+  content: string;
+  type: IntelType; // 人物或物品
+  target: string; // 人物名称或物品名称
+  timestamp: number;
 }

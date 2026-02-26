@@ -17,11 +17,12 @@ import {
   Alert,
   Animated,
   Switch,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, Message, Script, Character } from '../types';
+import { RootStackParamList, Message, Script, Character, Intel } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { Feather } from '@expo/vector-icons';
 import { talkToDM, talkToCharacter } from '../services/ai';
@@ -43,7 +44,11 @@ export const DialogScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showReasoning, setShowReasoning] = useState<{ [key: string]: boolean }>({});
-  const [enableReasoning, setEnableReasoning] = useState(true); // 是否启用思考链
+  const [enableReasoning, setEnableReasoning] = useState(false); // 默认关闭思考链显示
+  const [clueModalVisible, setClueModalVisible] = useState(false); // 线索弹窗
+  const [clueModalTab, setClueModalTab] = useState<'clues' | 'intels'>('clues'); // 线索弹窗标签
+  const [discoveredClues, setDiscoveredClues] = useState<string[]>([]); // 已发现的线索ID
+  const [intels, setIntels] = useState<Intel[]>([]); // 已知情报列表
   const [script, setScript] = useState<Script | null>(null);
   const [playerCharacter, setPlayerCharacter] = useState<Character | null>(null);
   const [targetCharacter, setTargetCharacter] = useState<Character | null>(null);
@@ -135,6 +140,8 @@ export const DialogScreen: React.FC = () => {
 
       setScript(scriptData);
       setPlayerCharacter(playerChar);
+      setDiscoveredClues(progress.discoveredClues || []); // 加载已发现的线索
+      setIntels(progress.intels || []); // 加载已知情报
 
       // 如果有目标角色ID，则是与角色对话
       if (characterId) {
@@ -203,36 +210,110 @@ export const DialogScreen: React.FC = () => {
     }
   }, [messages, loading, streamingMessage]);
 
+  // 从消息中提取新线索
+  const extractIntels = (content: string): Intel[] => {
+    const newIntels: Intel[] = [];
+    const lines = content.split('\n');
+    let inClueSection = false;
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      // 检测是否进入新线索部分
+      if (trimmedLine.includes('**新线索**') || trimmedLine.includes('新线索：')) {
+        inClueSection = true;
+        continue;
+      }
+
+      // 检测是否离开新线索部分
+      if (inClueSection && (trimmedLine.startsWith('**') || trimmedLine === '')) {
+        if (!trimmedLine.includes('新线索')) {
+          inClueSection = false;
+        }
+        continue;
+      }
+
+      // 提取线索内容
+      if (inClueSection && trimmedLine.startsWith('-')) {
+        const clueText = trimmedLine.substring(1).trim();
+
+        // 提取分类信息
+        const characterMatch = clueText.match(/（人物[：:](.*?)）/);
+        const itemMatch = clueText.match(/（物品[：:](.*?)）/);
+
+        if (characterMatch) {
+          const target = characterMatch[1].trim();
+          const content = clueText.replace(/（人物[：:].*?）/, '').trim();
+          newIntels.push({
+            id: `intel_${Date.now()}_${newIntels.length}`,
+            content,
+            type: 'character',
+            target,
+            timestamp: Date.now(),
+          });
+        } else if (itemMatch) {
+          const target = itemMatch[1].trim();
+          const content = clueText.replace(/（物品[：:].*?）/, '').trim();
+          newIntels.push({
+            id: `intel_${Date.now()}_${newIntels.length}`,
+            content,
+            type: 'item',
+            target,
+            timestamp: Date.now(),
+          });
+        }
+      }
+    }
+
+    return newIntels;
+  };
+
   const handleSend = async () => {
     if (!inputText.trim() || sending || !script || !playerCharacter) return;
     if (!pc.ensurePoints()) return;
 
+    const timestamp = Date.now();
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `${timestamp}_user`,
       role: 'user',
       content: inputText.trim(),
-      timestamp: Date.now(),
+      timestamp,
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setSending(true);
-    setStreamingMessage(null); // 确保清空之前的流式消息
+    setStreamingMessage(null);
 
     try {
       let result: { content: string; reasoning?: string };
+      let firstMessageComplete = false;
+      let fullContent = '';
 
       // 流式回调函数
       const handleStream = (content: string, reasoning?: string) => {
-        console.log('🎨 UI 更新流式消息:', content.length, '字符');
-        // 使用 requestAnimationFrame 确保 UI 更新
-        requestAnimationFrame(() => {
-          setStreamingMessage({ content, reasoning });
-        });
+        fullContent = content;
+
+        // 检测是否包含分隔符
+        const separatorIndex = content.indexOf('\n---\n');
+
+        if (separatorIndex !== -1 && !firstMessageComplete) {
+          // 找到第一个分隔符，只显示第一条消息
+          const firstMessage = content.substring(0, separatorIndex).trim();
+          firstMessageComplete = true;
+
+          requestAnimationFrame(() => {
+            setStreamingMessage({ content: firstMessage, reasoning });
+          });
+        } else if (!firstMessageComplete) {
+          // 还没遇到分隔符，继续流式输出
+          requestAnimationFrame(() => {
+            setStreamingMessage({ content, reasoning });
+          });
+        }
       };
 
       if (targetCharacter) {
-        // 与角色对话
         result = await talkToCharacter(
           targetCharacter,
           playerCharacter,
@@ -243,7 +324,6 @@ export const DialogScreen: React.FC = () => {
           enableReasoning
         );
       } else {
-        // 与DM对话
         result = await talkToDM(
           script,
           playerCharacter,
@@ -254,43 +334,90 @@ export const DialogScreen: React.FC = () => {
         );
       }
 
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: targetCharacter ? 'character' : 'dm',
-        characterId: targetCharacter?.id,
-        content: result.content,
-        reasoning: result.reasoning,
-        timestamp: Date.now(),
-      };
+      // 按分隔符拆分消息
+      const messageParts = result.content
+        .split(/\n---\n/)
+        .map(part => part.trim())
+        .filter(part => part.length > 0);
 
-      // 先清除流式消息和发送状态，再添加完整消息
+      console.log('📨 消息拆分结果:', messageParts.length, '条消息');
+
+      // 提取新线索并保存到情报
+      const newIntels = extractIntels(result.content);
+      if (newIntels.length > 0) {
+        console.log('🔍 提取到新线索:', newIntels.length, '条');
+        setIntels(prev => [...prev, ...newIntels]);
+      }
+
+      // 清除流式消息
       setStreamingMessage(null);
       setSending(false);
-      setMessages(prev => [...prev, aiMessage]);
 
-      // AI 回复成功后扣除积分
-      await pc.consume();
+      // 添加第一条消息
+      if (messageParts.length > 0) {
+        const baseTimestamp = Date.now();
+        const firstAiMessage: Message = {
+          id: `${baseTimestamp}_ai_0`,
+          role: targetCharacter ? 'character' : 'dm',
+          characterId: targetCharacter?.id,
+          content: messageParts[0],
+          reasoning: result.reasoning,
+          timestamp: baseTimestamp,
+        };
 
-      // 保存对话历史（使用更新后的消息列表）
-      const progress = await getGameProgress(script.id);
-      if (progress) {
-        // 移除当前角色的旧对话记录
-        const otherConversations = progress.conversationHistory.filter(
-          msg => targetCharacter ? msg.characterId !== targetCharacter.id : msg.role !== 'dm'
-        );
+        setMessages(prev => [...prev, firstAiMessage]);
 
-        // 添加当前对话的所有消息
-        const currentConversation = [...messages, userMessage, aiMessage];
+        // 如果有后续消息，逐条添加（延迟发送模拟群聊效果）
+        if (messageParts.length > 1) {
+          for (let i = 1; i < messageParts.length; i++) {
+            await new Promise(resolve => setTimeout(resolve, 800)); // 延迟 800ms
 
-        // 合并所有对话
-        progress.conversationHistory = [...otherConversations, ...currentConversation];
-        await saveGameProgress(progress);
+            const nextMessage: Message = {
+              id: `${baseTimestamp}_ai_${i}`,
+              role: targetCharacter ? 'character' : 'dm',
+              characterId: targetCharacter?.id,
+              content: messageParts[i],
+              timestamp: baseTimestamp + i,
+            };
+
+            setMessages(prev => [...prev, nextMessage]);
+          }
+        }
+
+        // AI 回复成功后扣除积分
+        await pc.consume();
+
+        // 保存对话历史
+        const progress = await getGameProgress(script.id);
+        if (progress) {
+          const otherConversations = progress.conversationHistory.filter(
+            msg => targetCharacter ? msg.characterId !== targetCharacter.id : msg.role !== 'dm'
+          );
+
+          // 构建所有新消息
+          const messageRole = targetCharacter ? 'character' : 'dm';
+          const baseTimestamp = Date.now();
+          const allNewMessages: Message[] = [
+            userMessage,
+            ...messageParts.map((part, index) => ({
+              id: `${baseTimestamp}_msg_${index}`,
+              role: messageRole as 'character' | 'dm',
+              characterId: targetCharacter?.id,
+              content: part,
+              reasoning: index === 0 ? result.reasoning : undefined,
+              timestamp: baseTimestamp + index,
+            }))
+          ];
+
+          progress.conversationHistory = [...otherConversations, ...messages, ...allNewMessages];
+          progress.intels = intels; // 保存情报
+          await saveGameProgress(progress);
+        }
       }
     } catch (error: any) {
       console.error('AI 对话失败:', error);
       Alert.alert('错误', error.message || '对话失败，请重试');
 
-      // 添加错误提示消息
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'dm',
@@ -298,7 +425,7 @@ export const DialogScreen: React.FC = () => {
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, errorMessage]);
-      setStreamingMessage(null); // 清除流式消息
+      setStreamingMessage(null);
     } finally {
       setSending(false);
     }
@@ -473,7 +600,7 @@ export const DialogScreen: React.FC = () => {
 
           {/* 流式输出中的消息 */}
           {sending && streamingMessage && streamingMessage.content && (
-            <View style={[styles.messageWrapper, styles.aiMessageWrapper]}>
+            <View key="streaming-message" style={[styles.messageWrapper, styles.aiMessageWrapper]}>
               <View style={[styles.messageBubble, styles.aiBubble, styles.streamingBubble]}>
                 <LinearGradient
                   colors={['rgba(27,31,59,0.4)', 'rgba(107,92,231,0.2)']}
@@ -539,6 +666,13 @@ export const DialogScreen: React.FC = () => {
             colors={['rgba(107,92,231,0.2)', 'rgba(27,31,59,0.15)']}
             style={styles.inputGradient}
           />
+          {/* 线索按钮 */}
+          <TouchableOpacity
+            style={styles.clueButton}
+            onPress={() => setClueModalVisible(true)}
+          >
+            <Feather name="file-text" size={18} color={COLORS.accent} />
+          </TouchableOpacity>
           <TextInput
             style={styles.input}
             placeholder="输入你的问题..."
@@ -567,6 +701,172 @@ export const DialogScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* 线索弹窗 */}
+      <Modal
+        visible={clueModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setClueModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* 弹窗头部 */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>线索与情报</Text>
+              <TouchableOpacity onPress={() => setClueModalVisible(false)}>
+                <Feather name="x" size={24} color={COLORS.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 标签切换 */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, clueModalTab === 'clues' && styles.tabActive]}
+                onPress={() => setClueModalTab('clues')}
+              >
+                <Text style={[styles.tabText, clueModalTab === 'clues' && styles.tabTextActive]}>
+                  已知线索
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, clueModalTab === 'intels' && styles.tabActive]}
+                onPress={() => setClueModalTab('intels')}
+              >
+                <Text style={[styles.tabText, clueModalTab === 'intels' && styles.tabTextActive]}>
+                  已知情报
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 内容区域 */}
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {clueModalTab === 'clues' ? (
+                <View style={styles.cluesContent}>
+                  {script && script.clues.length > 0 ? (
+                    <>
+                      {/* 关键线索 */}
+                      {script.clues.filter(c => c.type === 'key').length > 0 && (
+                        <View style={styles.clueSection}>
+                          <Text style={styles.clueSectionTitle}>关键线索</Text>
+                          {script.clues
+                            .filter(c => c.type === 'key')
+                            .map(clue => (
+                              <View key={clue.id} style={styles.clueCard}>
+                                <View style={styles.clueHeader}>
+                                  <Feather name="alert-circle" size={16} color="#ff6b6b" />
+                                  <Text style={styles.clueName}>{clue.name}</Text>
+                                </View>
+                                <Text style={styles.clueLocation}>发现地点：{clue.location}</Text>
+                                <Text style={styles.clueDescription}>{clue.description}</Text>
+                              </View>
+                            ))}
+                        </View>
+                      )}
+
+                      {/* 重要线索 */}
+                      {script.clues.filter(c => c.type === 'important').length > 0 && (
+                        <View style={styles.clueSection}>
+                          <Text style={styles.clueSectionTitle}>重要线索</Text>
+                          {script.clues
+                            .filter(c => c.type === 'important')
+                            .map(clue => (
+                              <View key={clue.id} style={styles.clueCard}>
+                                <View style={styles.clueHeader}>
+                                  <Feather name="info" size={16} color="#ffa500" />
+                                  <Text style={styles.clueName}>{clue.name}</Text>
+                                </View>
+                                <Text style={styles.clueLocation}>发现地点：{clue.location}</Text>
+                                <Text style={styles.clueDescription}>{clue.description}</Text>
+                              </View>
+                            ))}
+                        </View>
+                      )}
+
+                      {/* 普通线索 */}
+                      {script.clues.filter(c => c.type === 'normal').length > 0 && (
+                        <View style={styles.clueSection}>
+                          <Text style={styles.clueSectionTitle}>普通线索</Text>
+                          {script.clues
+                            .filter(c => c.type === 'normal')
+                            .map(clue => (
+                              <View key={clue.id} style={styles.clueCard}>
+                                <View style={styles.clueHeader}>
+                                  <Feather name="file-text" size={16} color="#4a90e2" />
+                                  <Text style={styles.clueName}>{clue.name}</Text>
+                                </View>
+                                <Text style={styles.clueLocation}>发现地点：{clue.location}</Text>
+                                <Text style={styles.clueDescription}>{clue.description}</Text>
+                              </View>
+                            ))}
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={styles.emptyText}>暂无线索</Text>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.intelsContent}>
+                  {intels.length > 0 ? (
+                    <>
+                      {/* 人物情报 */}
+                      {intels.filter(i => i.type === 'character').length > 0 && (
+                        <View style={styles.clueSection}>
+                          <Text style={styles.clueSectionTitle}>人物情报</Text>
+                          {/* 按人物分组 */}
+                          {Array.from(new Set(intels.filter(i => i.type === 'character').map(i => i.target))).map(target => (
+                            <View key={target} style={styles.intelGroup}>
+                              <View style={styles.intelTargetHeader}>
+                                <Feather name="user" size={16} color={COLORS.accent} />
+                                <Text style={styles.intelTargetName}>{target}</Text>
+                              </View>
+                              {intels
+                                .filter(i => i.type === 'character' && i.target === target)
+                                .map(intel => (
+                                  <View key={intel.id} style={styles.intelItem}>
+                                    <Text style={styles.intelBullet}>•</Text>
+                                    <Text style={styles.intelContent}>{intel.content}</Text>
+                                  </View>
+                                ))}
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* 物品情报 */}
+                      {intels.filter(i => i.type === 'item').length > 0 && (
+                        <View style={styles.clueSection}>
+                          <Text style={styles.clueSectionTitle}>物品情报</Text>
+                          {/* 按物品分组 */}
+                          {Array.from(new Set(intels.filter(i => i.type === 'item').map(i => i.target))).map(target => (
+                            <View key={target} style={styles.intelGroup}>
+                              <View style={styles.intelTargetHeader}>
+                                <Feather name="package" size={16} color={COLORS.accent} />
+                                <Text style={styles.intelTargetName}>{target}</Text>
+                              </View>
+                              {intels
+                                .filter(i => i.type === 'item' && i.target === target)
+                                .map(intel => (
+                                  <View key={intel.id} style={styles.intelItem}>
+                                    <Text style={styles.intelBullet}>•</Text>
+                                    <Text style={styles.intelContent}>{intel.content}</Text>
+                                  </View>
+                                ))}
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={styles.emptyText}>暂无情报</Text>
+                  )}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -826,5 +1126,150 @@ const styles = StyleSheet.create({
   dot: {
     fontSize: 16,
     color: COLORS.accent,
+  },
+  clueButton: {
+    padding: SPACING.xs,
+    marginRight: SPACING.xs,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: RADIUS.large,
+    borderTopRightRadius: RADIUS.large,
+    height: '60%',
+    paddingTop: SPACING.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.textDark,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: COLORS.accent,
+  },
+  tabText: {
+    fontSize: 14,
+    color: COLORS.textGray,
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: COLORS.accent,
+    fontWeight: 'bold',
+  },
+  modalScroll: {
+    flex: 1,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+  },
+  cluesContent: {
+    paddingBottom: SPACING.xl,
+  },
+  intelsContent: {
+    paddingBottom: SPACING.xl,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: COLORS.textGray,
+    fontSize: 14,
+    marginTop: SPACING.xl,
+  },
+  clueSection: {
+    marginBottom: SPACING.lg,
+  },
+  clueSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.textDark,
+    marginBottom: SPACING.sm,
+  },
+  clueCard: {
+    backgroundColor: 'rgba(27,31,59,0.3)',
+    borderRadius: RADIUS.medium,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  clueHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  clueName: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: COLORS.textDark,
+  },
+  clueLocation: {
+    fontSize: 12,
+    color: COLORS.textGray,
+    marginBottom: SPACING.xs,
+  },
+  clueDescription: {
+    fontSize: 13,
+    color: COLORS.textDark,
+    lineHeight: 20,
+  },
+  intelGroup: {
+    marginBottom: SPACING.md,
+  },
+  intelTargetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+    paddingBottom: SPACING.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  intelTargetName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.accent,
+  },
+  intelItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: SPACING.xs,
+    paddingLeft: SPACING.sm,
+  },
+  intelBullet: {
+    fontSize: 14,
+    color: COLORS.textGray,
+    marginRight: SPACING.xs,
+    marginTop: 2,
+  },
+  intelContent: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textDark,
+    lineHeight: 20,
   },
 });
