@@ -38,7 +38,7 @@ const convertFirebaseUser = (firebaseUser: FirebaseUser): User => {
   return {
     id: firebaseUser.uid,
     email: firebaseUser.email || '',
-    username: firebaseUser.displayName || '用户',
+    username: firebaseUser.displayName || (firebaseUser.isAnonymous ? '游客用户' : '用户'),
     avatar: firebaseUser.photoURL || undefined,
     createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
     membershipType: 'free',

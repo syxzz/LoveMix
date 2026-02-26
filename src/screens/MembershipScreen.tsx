@@ -25,7 +25,15 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSetAtom } from 'jotai';
 import { RootStackParamList, Membership, Transaction } from '../types';
+import { membershipCacheAtom } from '../store';
+import {
+  getCachedMembership,
+  setCachedMembership,
+  getCachedTransactions,
+  setCachedTransactions,
+} from '../services/membershipCache';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { Feather } from '@expo/vector-icons';
 import {
@@ -53,6 +61,7 @@ type MembershipScreenNavigationProp = NativeStackNavigationProp<RootStackParamLi
 
 export const MembershipScreen: React.FC = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();
+  const setMembershipCache = useSetAtom(membershipCacheAtom);
 
   const [membership, setMembership] = useState<Membership | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -67,10 +76,21 @@ export const MembershipScreen: React.FC = () => {
   const textOpacity = useSharedValue(0.7);
   const spinnerRotate = useSharedValue(0);
 
-  // 每次页面获得焦点时刷新（含从充值页返回），保证积分余额立即更新
+  // 先展示本地缓存，再请求并用结果替换
   useFocusEffect(
     React.useCallback(() => {
-      loadData();
+      const userId = getUserId();
+      (async () => {
+        const cached = await getCachedMembership(userId);
+        const cachedTx = await getCachedTransactions(userId);
+        if (cached) {
+          setMembership(cached);
+          setTransactions(cachedTx?.slice(0, 10) ?? []);
+          setLoading(false);
+          setMembershipCache(cached);
+        }
+        await loadData();
+      })();
     }, [])
   );
 
@@ -131,21 +151,17 @@ export const MembershipScreen: React.FC = () => {
   }));
 
   const loadData = async () => {
+    const userId = getUserId();
     try {
-      // 使用当前登录用户 ID（Firebase 已启用时），否则用测试 ID
-      let userId = 'test_user_001';
-      if (USE_FIREBASE) {
-        try {
-          userId = getCurrentUserId();
-        } catch {
-          // 未登录时保持测试用户
-        }
-      }
       const membershipData = await getMembership(userId);
       const transactionsData = await getTransactions(userId);
+      const txSlice = transactionsData.slice(0, 10);
 
       setMembership(membershipData);
-      setTransactions(transactionsData.slice(0, 10)); // 只显示最近10条
+      setTransactions(txSlice);
+      setMembershipCache(membershipData);
+      await setCachedMembership(userId, membershipData);
+      await setCachedTransactions(userId, transactionsData);
     } catch (error) {
       console.error('加载会员数据失败:', error);
       Alert.alert('错误', '加载失败，请重试');

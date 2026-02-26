@@ -67,9 +67,21 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     // 如果使用 Firebase，监听认证状态变化
     if (USE_FIREBASE && onAuthStateChanged) {
-      const unsubscribe = onAuthStateChanged((user) => {
-        setUser(user);
-        setIsAuthenticated(!!user);
+      const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
+        if (firebaseUser) {
+          setUser(firebaseUser);
+          setIsAuthenticated(true);
+          return;
+        }
+        // Firebase 返回 null 时（如冷启动尚未恢复会话），先尝试用本地存储恢复，避免清空已登录用户
+        const stored = await getCurrentUser();
+        if (stored) {
+          setUser(stored);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       });
 
       return () => unsubscribe();

@@ -20,13 +20,15 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { GradientButton } from '../components/GradientButton';
-import { userAtom, isAuthenticatedAtom } from '../store';
+import { userAtom, isAuthenticatedAtom, membershipCacheAtom } from '../store';
+import { getCachedMembership } from '../services/membershipCache';
 import { updateUser, isGuestUser, logout } from '../services/auth';
 import { useImagePicker } from '../hooks/useImagePicker';
 import { Feather } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
+import type { MembershipTier } from '../types/membership';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 
@@ -91,6 +93,8 @@ export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const [user, setUser] = useAtom(userAtom);
   const setIsAuthenticated = useSetAtom(isAuthenticatedAtom);
+  const membershipCache = useAtomValue(membershipCacheAtom);
+  const setMembershipCache = useSetAtom(membershipCacheAtom);
   const { showImagePickerOptions } = useImagePicker();
 
   const [username, setUsername] = useState(user?.username || '');
@@ -103,9 +107,26 @@ export const ProfileScreen: React.FC = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(30)).current;
 
+  // 当 user 从异步恢复（如 Firebase/AsyncStorage）后，同步到本地表单项
+  useEffect(() => {
+    setUsername(user?.username || '');
+    setPhone(user?.phone || '');
+  }, [user?.username, user?.phone]);
+
   useEffect(() => {
     checkGuestStatus();
+  }, []);
 
+  // 从本地缓存水合会员信息，便于个人中心显示等级（即使用户未先打开会员中心）
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
+    getCachedMembership(userId).then(cached => {
+      if (cached) setMembershipCache(cached);
+    });
+  }, [user?.id, setMembershipCache]);
+
+  useEffect(() => {
     // 入场动画
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -154,7 +175,6 @@ export const ProfileScreen: React.FC = () => {
     if (result) {
       try {
         setLoading(true);
-        // 更新用户头像
         const updatedUser = await updateUser({ avatar: result.uri });
         setUser(updatedUser);
         Alert.alert('成功', '头像已更新');
@@ -208,12 +228,16 @@ export const ProfileScreen: React.FC = () => {
     ]);
   };
 
-  const getMembershipBadge = () => {
-    switch (user?.membershipType) {
+  const getMembershipBadge = (): { label: string; color: string } => {
+    const tier: MembershipTier | undefined = membershipCache?.tier ?? (user?.membershipType as MembershipTier | undefined);
+    switch (tier) {
       case 'vip':
         return { label: 'VIP会员', color: '#FFD700' };
       case 'premium':
         return { label: '高级会员', color: '#FF6B9D' };
+      case 'basic':
+        return { label: '基础会员', color: '#3498db' };
+      case 'free':
       default:
         return { label: '普通会员', color: 'rgba(232,232,232,0.7)' };
     }

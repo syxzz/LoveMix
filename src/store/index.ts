@@ -5,6 +5,7 @@
 
 import { atom } from 'jotai';
 import { APIKeys, GenerationResult, User, WorkHistory } from '../types';
+import type { Membership } from '../types/membership';
 import { VideoTaskState } from '../services/videoGeneration';
 
 /**
@@ -53,3 +54,9 @@ export const videoTaskAtom = atom<VideoTaskState>({
   videoUrl: null,
   error: null,
 });
+
+/**
+ * 当前用户会员信息缓存（本地 + 内存）
+ * 会员中心先展示此数据，请求返回后更新；个人中心会员等级也读此数据
+ */
+export const membershipCacheAtom = atom<Membership | null>(null);
