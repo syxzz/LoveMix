@@ -115,8 +115,8 @@ export const RECHARGE_PACKAGES: RechargePackage[] = [
  *   VIP      × 0.7（7折）
  */
 export const POINTS_COST: PointsCost = {
-  scriptGeneration: 50, // AI 剧本生成
-  aiConversation: 2,    // AI 对话（每条消息）
+  scriptGeneration: 120, // AI 剧本生成
+  aiConversation: 10,    // AI 对话（每条消息）
 };
 
 // 功能中文名称（用于扣分描述）

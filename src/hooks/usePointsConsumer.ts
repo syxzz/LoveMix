@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { userAtom, membershipCacheAtom } from '../store';
 import { setCachedMembership, getCachedMembership } from '../services/membershipCache';
+import { isGuestUser } from '../services/auth';
 import {
   MEMBERSHIP_TIERS,
   POINTS_COST,
@@ -74,6 +75,20 @@ export function usePointsConsumer(feature: PointsCostKey): PointsConsumer {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [loadingMembership, setLoadingMembership] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
+
+  // 检查游客状态（从 AsyncStorage 读取，支持 Firebase 匿名登录）
+  useEffect(() => {
+    if (!user?.id) {
+      setIsGuest(false);
+      return;
+    }
+    let cancelled = false;
+    isGuestUser()
+      .then(guest => { if (!cancelled) setIsGuest(guest); })
+      .catch(() => { if (!cancelled) setIsGuest(false); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   // 若全局缓存为空，自动从服务端拉取并回填
   useEffect(() => {
@@ -116,7 +131,10 @@ export function usePointsConsumer(feature: PointsCostKey): PointsConsumer {
 
   const ensurePoints = (): boolean => {
     if (!user?.id) {
-      Alert.alert('请先登录', '登录后即可使用 AI 生成功能');
+      Alert.alert('请先登录', '登录后即可使用此功能', [
+        { text: '去登录', onPress: () => navigation.navigate('Login') },
+        { text: '取消', style: 'cancel' },
+      ]);
       return false;
     }
     if (loadingMembership) {
@@ -124,17 +142,26 @@ export function usePointsConsumer(feature: PointsCostKey): PointsConsumer {
       return false;
     }
     if (!hasEnoughPoints) {
-      Alert.alert(
-        '积分不足',
-        `此操作需要 ${actualCost} 积分\n当前余额：${points} 积分\n\n充值后即可使用`,
-        [
-          {
-            text: '去充值',
-            onPress: () => navigation.navigate('Recharge'),
-          },
-          { text: '取消', style: 'cancel' },
-        ]
-      );
+      const featureName = FEATURE_NAMES[feature] || '此功能';
+      if (isGuest) {
+        Alert.alert(
+          '请先注册账号',
+          `「${featureName}」需要 ${actualCost} 积分\n当前余额：${points} 积分\n\n游客积分有限，注册账号可获得更多积分并支持充值`,
+          [
+            { text: '去注册', onPress: () => navigation.navigate('Register') },
+            { text: '取消', style: 'cancel' },
+          ]
+        );
+      } else {
+        Alert.alert(
+          '积分不足',
+          `「${featureName}」需要 ${actualCost} 积分\n当前余额：${points} 积分\n\n充值后即可继续使用`,
+          [
+            { text: '去充值', onPress: () => navigation.navigate('Recharge') },
+            { text: '取消', style: 'cancel' },
+          ]
+        );
+      }
       return false;
     }
     return true;
