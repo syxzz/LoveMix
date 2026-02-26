@@ -1134,8 +1134,9 @@ export const generateScript = async (
     onProgress?.('构建剧本对象...', 0.9);
 
     // 构建完整的 Script 对象
+    const scriptId = `custom_${Date.now()}`;
     const script: Script = {
-      id: `custom_${Date.now()}`,
+      id: scriptId,
       title: scriptData.title,
       description: scriptData.description,
       difficulty: scriptData.difficulty || 'medium',
@@ -1143,7 +1144,7 @@ export const generateScript = async (
       characterCount: scriptData.characters.length,
       storyBackground: scriptData.storyBackground,
       characters: scriptData.characters.map((char: any, index: number) => ({
-        id: `char_${index + 1}`,
+        id: `${scriptId}_char_${index + 1}`,
         name: char.name,
         age: char.age,
         gender: char.gender,
@@ -1154,14 +1155,14 @@ export const generateScript = async (
         goal: char.goal,
       })),
       clues: scriptData.clues.map((clue: any, index: number) => ({
-        id: `clue_${index + 1}`,
+        id: `${scriptId}_clue_${index + 1}`,
         name: clue.name,
         type: clue.type,
         location: clue.location,
         description: clue.description,
         discovered: false,
       })),
-      murderer: `char_${scriptData.murdererIndex + 1}`,
+      murderer: `${scriptId}_char_${scriptData.murdererIndex + 1}`,
       motive: scriptData.motive,
       truth: scriptData.truth,
       genre,
@@ -1170,7 +1171,7 @@ export const generateScript = async (
     };
 
     // 生成封面图片（横版 + 竖版并行生成）
-    onProgress?.('生成剧本封面...', 0.92);
+    onProgress?.('生成剧本封面...', 0.85);
     try {
       const [landscapeCover, portraitCover] = await Promise.all([
         generateScriptCoverImage(script).catch(() => null),
@@ -1180,6 +1181,21 @@ export const generateScript = async (
       if (portraitCover) script.coverImagePortrait = portraitCover;
     } catch (e) {
       console.error('封面生成失败，不影响剧本创建:', e);
+    }
+
+    // 生成角色头像（并行生成，每个角色独立的头像）
+    onProgress?.('生成角色头像...', 0.92);
+    try {
+      const avatarPromises = script.characters.map(char =>
+        generateCharacterAvatar(char)
+          .then(url => { char.avatar = url; })
+          .catch(err => {
+            console.error(`角色头像生成失败 ${char.name}:`, err.message);
+          })
+      );
+      await Promise.all(avatarPromises);
+    } catch (e) {
+      console.error('角色头像生成失败，不影响剧本创建:', e);
     }
 
     onProgress?.('剧本生成完成！', 1.0);
