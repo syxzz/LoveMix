@@ -104,9 +104,10 @@ export const GroupDiscussScreen: React.FC = () => {
   const [isPlayerTurn, setIsPlayerTurn] = useState(false);
   const [currentSpeaker, setCurrentSpeaker] = useState<string>('');
   const [discussionStopped, setDiscussionStopped] = useState(false);
-  const [streamingMessage, setStreamingMessage] = useState<GroupMessage | null>(null); // 流式消息
-  const aiRequestAbortRef = useRef(false); // 用于中断AI请求
-  const skipTriggerRef = useRef(false); // 用于跳过useEffect的自动触发
+  const [streamingMessage, setStreamingMessage] = useState<GroupMessage | null>(null);
+  const aiRequestAbortRef = useRef(false);
+  const skipTriggerRef = useRef(false);
+  const roundSpokenRef = useRef<Set<string>>(new Set());
 
   // 加载动画
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -202,9 +203,9 @@ export const GroupDiscussScreen: React.FC = () => {
       setPlayerCharacter(playerChar);
       setOtherCharacters(others);
 
-      // 加载历史讨论记录
+      // 加载历史讨论记录（只加载群聊消息，排除 DM/1v1 对话）
       const groupHistory = progress.conversationHistory?.filter(
-        msg => msg.role === 'character' || msg.role === 'user' || msg.role === 'dm'
+        msg => msg.role === 'character' && msg.characterId
       ) || [];
 
       if (groupHistory.length > 0) {
@@ -303,37 +304,31 @@ export const GroupDiscussScreen: React.FC = () => {
     }
   }, [messages, loading, aiThinking, isPlayerTurn, discussionStopped]);
 
-  // 触发AI角色发言
+  // 触发AI角色发言（按顺序，所有AI角色说完再轮到玩家）
   const triggerAICharacterSpeak = async (forceStart = false) => {
     if (!script || !playerCharacter || otherCharacters.length === 0) return;
-    if (discussionStopped) {
-      console.log('⏸ 讨论已停止，取消AI发言');
-      return;
-    }
-    // 如果不是强制开始，检查是否是玩家回合
-    if (!forceStart && isPlayerTurn) {
-      console.log('⚠️ 玩家回合，取消AI发言');
-      return;
-    }
-    if (aiRequestAbortRef.current) {
-      console.log('🚫 AI请求已中断');
+    if (discussionStopped) return;
+    if (!forceStart && isPlayerTurn) return;
+    if (aiRequestAbortRef.current) return;
+
+    // 找到本轮还没发言的AI角色
+    const unspoken = otherCharacters.filter(c => !roundSpokenRef.current.has(c.id));
+    if (unspoken.length === 0) {
+      // 所有AI角色已发言，轮到玩家
+      setIsPlayerTurn(true);
+      setCurrentSpeaker(playerCharacter?.name || '你');
       return;
     }
 
-    console.log('🚀 开始AI发言流程');
+    const speakingCharacter = unspoken[0];
+    roundSpokenRef.current.add(speakingCharacter.id);
 
-    // 重置中断标志
     aiRequestAbortRef.current = false;
     setAiThinking(true);
     setIsPlayerTurn(false);
+    setCurrentSpeaker(speakingCharacter.name);
 
     try {
-      // 随机选择一个AI角色发言（或根据逻辑选择）
-      const randomIndex = Math.floor(Math.random() * otherCharacters.length);
-      const speakingCharacter = otherCharacters[randomIndex];
-      setCurrentSpeaker(speakingCharacter.name);
-
-      // 构建讨论上下文
       const discussionContext = messages
         .filter(msg => msg.role !== 'dm')
         .map(msg => `${msg.characterName || '未知'}: ${msg.content}`)
@@ -341,16 +336,13 @@ export const GroupDiscussScreen: React.FC = () => {
 
       const prompt = `当前讨论内容：\n${discussionContext}\n\n现在轮到你发言了。请根据你的角色设定，分享你的观点、线索或推理。记住要保护自己的秘密，如果你是凶手要撇清嫌疑。回复要简短（50-100字）。`;
 
-      // 检查是否被中断（如果是强制开始，不检查isPlayerTurn）
       if (aiRequestAbortRef.current || discussionStopped || (!forceStart && isPlayerTurn)) {
-        console.log('🚫 AI请求在发送前被中断');
         setAiThinking(false);
         setCurrentSpeaker('');
         setStreamingMessage(null);
         return;
       }
 
-      // 创建流式消息对象
       const streamingMsg: GroupMessage = {
         id: Date.now().toString(),
         role: 'character',
@@ -369,29 +361,20 @@ export const GroupDiscussScreen: React.FC = () => {
         messages,
         prompt,
         (content) => {
-          // 流式回调：实时更新消息内容
-          setStreamingMessage({
-            ...streamingMsg,
-            content,
-          });
-          // 自动滚动到底部
+          setStreamingMessage({ ...streamingMsg, content });
           setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
           }, 50);
         },
-        false // 不需要思考链
+        false
       );
 
-      // 检查是否在等待期间被中断（如果是强制开始，不检查isPlayerTurn）
       if (aiRequestAbortRef.current || discussionStopped || (!forceStart && isPlayerTurn)) {
-        console.log('🚫 AI请求在返回后被中断，丢弃结果');
         setAiThinking(false);
         setCurrentSpeaker('');
         setStreamingMessage(null);
         return;
       }
-
-      console.log('✅ AI回复成功:', result.content.substring(0, 50) + '...');
 
       const aiMessage: GroupMessage = {
         id: streamingMsg.id,
@@ -403,34 +386,23 @@ export const GroupDiscussScreen: React.FC = () => {
         isPlayer: false,
       };
 
-      console.log('🤖 AI发言:', aiMessage.characterName, aiMessage.content);
-
-      // 清除流式消息，添加到正式消息列表
       setStreamingMessage(null);
       const updatedMessages = [...messages, aiMessage];
-      console.log('📝 更新后的消息数量:', updatedMessages.length);
-      console.log('📝 最后一条消息:', updatedMessages[updatedMessages.length - 1].characterName);
-
       setMessages(updatedMessages);
       setAiThinking(false);
       setCurrentSpeaker('');
 
-      // 强制滚动到底部
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 200);
 
-      // 保存进度（使用更新后的消息列表）
       await saveDiscussionProgress(updatedMessages);
-
-      // useEffect 会自动触发下一轮
     } catch (error: any) {
       console.error('AI 角色发言失败:', error);
       setAiThinking(false);
       setCurrentSpeaker('');
       setStreamingMessage(null);
 
-      // 发生错误时，等待后继续
       if (!discussionStopped && !aiRequestAbortRef.current) {
         setTimeout(() => {
           decideNextSpeaker();
@@ -441,28 +413,8 @@ export const GroupDiscussScreen: React.FC = () => {
 
   // 决定下一个发言者
   const decideNextSpeaker = () => {
-    if (discussionStopped) return; // 如果已停止，不再继续
-
-    console.log('🎯 决定下一个发言者...');
-
-    // 测试策略：每1轮AI发言后，轮到玩家（每个角色发言一次）
-    const aiMessageCount = messages.filter(
-      msg => msg.role === 'character' && !msg.isPlayer
-    ).length;
-
-    console.log('📊 AI发言次数:', aiMessageCount);
-
-    if (aiMessageCount > 0 && aiMessageCount % 1 === 0) {
-      // 轮到玩家
-      console.log('👤 轮到玩家发言');
-      setIsPlayerTurn(true);
-      setCurrentSpeaker(playerCharacter?.name || '你');
-      // 不再调用 triggerAICharacterSpeak，等待玩家发言
-    } else {
-      // 继续AI发言
-      console.log('🤖 继续AI发言');
-      triggerAICharacterSpeak();
-    }
+    if (discussionStopped) return;
+    triggerAICharacterSpeak();
   };
 
   // 玩家发言
@@ -479,28 +431,24 @@ export const GroupDiscussScreen: React.FC = () => {
       isPlayer: true,
     };
 
-    console.log('👤 玩家发言:', playerMessage.content);
+    // 新一轮开始
+    roundSpokenRef.current.clear();
 
-    // 先更新消息列表
     const updatedMessages = [...messages, playerMessage];
     setMessages(updatedMessages);
     setInputText('');
     setIsPlayerTurn(false);
 
-    // 保存进度（使用更新后的消息列表）
     await saveDiscussionProgress(updatedMessages);
-
-    // useEffect 会自动触发下一轮
   };
 
   // 玩家跳过发言
   const handlePlayerSkip = () => {
-    console.log('⏭️ 玩家跳过发言');
-    // 设置跳过标志，防止useEffect自动触发
+    // 新一轮开始
+    roundSpokenRef.current.clear();
     skipTriggerRef.current = true;
     setIsPlayerTurn(false);
     setCurrentSpeaker('');
-    // 强制触发AI发言（跳过玩家回合检查）
     setTimeout(() => {
       triggerAICharacterSpeak(true);
     }, 100);
@@ -536,14 +484,23 @@ export const GroupDiscussScreen: React.FC = () => {
 
     const progress = await getGameProgress(script.id);
     if (progress) {
-      // 只保存群聊消息
-      progress.conversationHistory = updatedMessages.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        characterId: msg.characterId,
-        content: msg.content,
-        timestamp: msg.timestamp,
-      }));
+      // 保留非群聊消息（DM 对话、1v1 角色对话等）
+      const nonGroupMessages = progress.conversationHistory.filter(
+        msg => !(msg.role === 'character' && msg.characterId)
+      );
+
+      // 提取群聊消息（排除 DM 欢迎消息）
+      const groupMessages: Message[] = updatedMessages
+        .filter(msg => msg.role === 'character' && msg.characterId)
+        .map(msg => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'dm' | 'character',
+          characterId: msg.characterId,
+          content: msg.content,
+          timestamp: msg.timestamp,
+        }));
+
+      progress.conversationHistory = [...nonGroupMessages, ...groupMessages];
       await saveGameProgress(progress);
     }
   };
@@ -669,59 +626,58 @@ export const GroupDiscussScreen: React.FC = () => {
           )}
         </ScrollView>
 
-        {/* 输入框 */}
-        <View style={styles.inputContainer}>
+        {/* 输入区域 */}
+        <View style={styles.inputArea}>
           <LinearGradient
             colors={['rgba(107,92,231,0.2)', 'rgba(27,31,59,0.15)']}
             style={styles.inputGradient}
           />
-
-          {/* 如果是玩家回合，显示跳过按钮 */}
-          {isPlayerTurn && !discussionStopped && (
-            <TouchableOpacity
-              style={styles.skipButton}
-              onPress={handlePlayerSkip}
-            >
-              <Feather name="skip-forward" size={16} color={COLORS.textGray} />
-              <Text style={styles.skipButtonText}>跳过发言</Text>
-            </TouchableOpacity>
-          )}
-
-          <TextInput
-            style={styles.input}
-            placeholder={
-              discussionStopped
-                ? '讨论已暂停...'
-                : isPlayerTurn
-                ? '轮到你发言了，说点什么...'
-                : '等待其他角色发言...'
-            }
-            placeholderTextColor={COLORS.textGray}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={500}
-            editable={!discussionStopped && isPlayerTurn}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!inputText.trim() || discussionStopped) && styles.sendButtonDisabled,
-            ]}
-            onPress={handlePlayerSpeak}
-            disabled={!inputText.trim() || discussionStopped}
-          >
-            <LinearGradient
-              colors={
-                !inputText.trim() || discussionStopped
-                  ? ['rgba(107,92,231,0.3)', 'rgba(201,169,110,0.2)']
-                  : [COLORS.primary, COLORS.accent]
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              placeholder={
+                discussionStopped
+                  ? '讨论已暂停...'
+                  : isPlayerTurn
+                  ? '轮到你发言了，说点什么...'
+                  : '等待其他角色发言...'
               }
-              style={styles.sendButtonGradient}
+              placeholderTextColor={COLORS.textGray}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+              editable={!discussionStopped && isPlayerTurn}
+            />
+            {isPlayerTurn && !discussionStopped && (
+              <TouchableOpacity
+                style={styles.skipButton}
+                onPress={handlePlayerSkip}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.skipButtonText}>跳过</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!inputText.trim() || discussionStopped || !isPlayerTurn) && styles.sendButtonDisabled,
+              ]}
+              onPress={handlePlayerSpeak}
+              disabled={!inputText.trim() || discussionStopped || !isPlayerTurn}
             >
-              <Feather name="send" size={20} color={COLORS.textLight} />
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={
+                  !inputText.trim() || discussionStopped || !isPlayerTurn
+                    ? ['rgba(107,92,231,0.3)', 'rgba(201,169,110,0.2)']
+                    : [COLORS.primary, COLORS.accent]
+                }
+                style={styles.sendButtonGradient}
+              >
+                <Feather name="send" size={18} color={COLORS.textLight} />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -892,57 +848,56 @@ const styles = StyleSheet.create({
     color: COLORS.textGray,
     fontStyle: 'italic',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+  inputArea: {
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    gap: SPACING.sm,
-    borderRadius: RADIUS.medium,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     overflow: 'hidden',
-    flexWrap: 'wrap',
   },
   inputGradient: {
     ...StyleSheet.absoluteFillObject,
   },
-  skipButton: {
+  inputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    backgroundColor: 'rgba(27,31,59,0.3)',
-    borderRadius: RADIUS.small,
-    borderWidth: 1,
-    borderColor: COLORS.textGray,
-  },
-  skipButtonText: {
-    fontSize: 12,
-    color: COLORS.textGray,
-    fontWeight: '600',
+    alignItems: 'flex-end',
+    gap: 8,
   },
   input: {
     flex: 1,
     backgroundColor: 'rgba(22,26,45,0.6)',
-    borderRadius: RADIUS.medium,
+    borderRadius: 20,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingVertical: 10,
     fontSize: 15,
     color: COLORS.textDark,
     maxHeight: 100,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  skipButton: {
+    height: 40,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(201,169,110,0.4)',
+    backgroundColor: 'rgba(201,169,110,0.1)',
+  },
+  skipButtonText: {
+    fontSize: 13,
+    color: COLORS.accent,
+    fontWeight: '600',
+  },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   sendButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   sendButtonGradient: {
     width: '100%',

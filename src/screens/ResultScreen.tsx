@@ -99,7 +99,7 @@ export const ResultScreen: React.FC = () => {
               style={styles.video}
               contentFit="contain"
               nativeControls
-              allowsFullscreen
+              fullscreenOptions={{ enable: true }}
             />
             <TouchableOpacity
               style={styles.playButton}
