@@ -46,3 +46,18 @@ export async function setCachedTransactions(userId: string, list: Transaction[])
     console.warn('写入交易缓存失败', e);
   }
 }
+
+/** 清除所有会员/交易本地缓存（供设置页「清空缓存」使用） */
+export async function clearAllMembershipCache(): Promise<void> {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const toRemove = keys.filter(
+      (k) => k.startsWith(CACHE_PREFIX) || k.startsWith(TX_PREFIX)
+    );
+    if (toRemove.length > 0) {
+      await AsyncStorage.multiRemove(toRemove);
+    }
+  } catch (e) {
+    console.warn('清除会员缓存失败', e);
+  }
+}

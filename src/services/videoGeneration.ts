@@ -73,6 +73,17 @@ async function saveVideoToCache(scriptId: string, url: string): Promise<void> {
   }
 }
 
+/** 清除视频缓存（供设置页「清空缓存」使用） */
+export async function clearVideoCache(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(VIDEO_CACHE_KEY);
+    videoMemoryCache = {};
+    logger.info('🗑️ [Video] 视频缓存已清除');
+  } catch (err: any) {
+    logger.error('清除视频缓存失败:', err?.message);
+  }
+}
+
 // ==================== 视频生成核心 ====================
 
 let currentTask: VideoTaskState = { ...INITIAL_STATE };

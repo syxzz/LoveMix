@@ -21,8 +21,9 @@ import { useAPIKeys } from '../hooks/useAPIKeys';
 import { COLORS, RADIUS, SPACING } from '../utils/constants';
 import { Feather } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
-import { userAtom, isAuthenticatedAtom } from '../store';
+import { userAtom, isAuthenticatedAtom, membershipCacheAtom } from '../store';
 import { logout } from '../services/auth';
+import { clearAppCache } from '../services/clearCache';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -32,9 +33,11 @@ export const SettingsScreen: React.FC = () => {
   const [user] = useAtom(userAtom);
   const setUser = useSetAtom(userAtom);
   const setIsAuthenticated = useSetAtom(isAuthenticatedAtom);
+  const setMembershipCache = useSetAtom(membershipCacheAtom);
 
   const [apiKey, setApiKey] = useState(keys.openaiKey || '');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
 
   const handleSaveApiKey = async () => {
     if (!apiKey.trim()) {
@@ -63,6 +66,31 @@ export const SettingsScreen: React.FC = () => {
             setUser(null);
             setIsAuthenticated(false);
             navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearCache = () => {
+    Alert.alert(
+      '清空缓存',
+      '将清除剧本封面、角色头像、开场图、视频与会员数据的本地缓存，不影响登录与设置。确定继续？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '清空',
+          onPress: async () => {
+            try {
+              setClearingCache(true);
+              await clearAppCache();
+              setMembershipCache(null);
+              Alert.alert('完成', '本地缓存已清空');
+            } catch (e) {
+              Alert.alert('失败', '清空缓存时出错，请重试');
+            } finally {
+              setClearingCache(false);
+            }
           },
         },
       ]
@@ -166,6 +194,24 @@ export const SettingsScreen: React.FC = () => {
                 {saving ? '保存中...' : '保存'}
               </Text>
             </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* 存储 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>存储</Text>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleClearCache}
+            disabled={clearingCache}
+          >
+            <View style={styles.menuLeft}>
+              <Feather name="trash-2" size={20} color={COLORS.accent} />
+              <Text style={styles.menuTitle}>
+                {clearingCache ? '清空中...' : '清空本地缓存'}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={COLORS.textGray} />
           </TouchableOpacity>
         </View>
 

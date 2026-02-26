@@ -48,12 +48,14 @@ export const useImagePicker = () => {
         return null;
       }
 
-      // 打开图片选择器
+      // 打开图片选择器（mediaTypes 使用新 API，避免 MediaTypeOptions 弃用警告）
+      // iOS：preferredAssetRepresentationMode.Current 尽量不转码，可减轻相册打开慢
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode?.Current,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {

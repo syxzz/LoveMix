@@ -180,6 +180,33 @@ export const clearCoverCache = async (): Promise<void> => {
   }
 };
 
+export const clearAvatarCache = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(AVATAR_CACHE_KEY);
+    avatarMemoryCache = {};
+    console.log('🗑️ 头像缓存已清除');
+  } catch (error) {
+    console.error('清除头像缓存失败:', error);
+  }
+};
+
+export const clearIntroImageCache = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(INTRO_IMAGE_CACHE_KEY);
+    introImageMemoryCache = {};
+    console.log('🗑️ 开场图缓存已清除');
+  } catch (error) {
+    console.error('清除开场图缓存失败:', error);
+  }
+};
+
+/** 清除剧本相关全部缓存（封面、角色头像、开场图） */
+export const clearAllScriptCaches = async (): Promise<void> => {
+  await clearCoverCache();
+  await clearAvatarCache();
+  await clearIntroImageCache();
+};
+
 // 预加载内存缓存（在应用启动时调用）
 export const preloadCoverCache = async (): Promise<void> => {
   await initMemoryCache();
