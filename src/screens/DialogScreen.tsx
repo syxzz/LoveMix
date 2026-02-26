@@ -27,6 +27,7 @@ import { Feather } from '@expo/vector-icons';
 import { talkToDM, talkToCharacter } from '../services/ai';
 import { getScriptById } from '../data/scripts';
 import { getGameProgress, saveGameProgress } from '../services/storage';
+import { usePointsConsumer } from '../hooks/usePointsConsumer';
 
 type DialogScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dialog'>;
 type DialogScreenRouteProp = RouteProp<RootStackParamList, 'Dialog'>;
@@ -35,6 +36,7 @@ export const DialogScreen: React.FC = () => {
   const navigation = useNavigation<DialogScreenNavigationProp>();
   const route = useRoute<DialogScreenRouteProp>();
   const scrollViewRef = useRef<ScrollView>(null);
+  const pc = usePointsConsumer('aiConversation');
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -203,6 +205,7 @@ export const DialogScreen: React.FC = () => {
 
   const handleSend = async () => {
     if (!inputText.trim() || sending || !script || !playerCharacter) return;
+    if (!pc.ensurePoints()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -264,6 +267,9 @@ export const DialogScreen: React.FC = () => {
       setStreamingMessage(null);
       setSending(false);
       setMessages(prev => [...prev, aiMessage]);
+
+      // AI 回复成功后扣除积分
+      await pc.consume();
 
       // 保存对话历史（使用更新后的消息列表）
       const progress = await getGameProgress(script.id);

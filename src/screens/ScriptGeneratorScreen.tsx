@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { RootStackParamList, ScriptGenre } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { generateScript } from '../services/ai';
+import { usePointsConsumer } from '../hooks/usePointsConsumer';
 import { saveCustomScript } from '../services/storage';
 import { generateVideoInBackground } from '../services/videoGeneration';
 import { Feather } from '@expo/vector-icons';
@@ -86,6 +87,7 @@ const GENRE_OPTIONS: Array<{
 export const ScriptGeneratorScreen: React.FC = () => {
   const navigation = useNavigation<ScriptGeneratorNavigationProp>();
   const { t } = useTranslation();
+  const pc = usePointsConsumer('scriptGeneration');
   const [selectedGenre, setSelectedGenre] = useState<ScriptGenre | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -100,6 +102,7 @@ export const ScriptGeneratorScreen: React.FC = () => {
       Alert.alert('提示', '请先选择一个剧本类型');
       return;
     }
+    if (!pc.ensurePoints()) return;
 
     setIsGenerating(true);
     setProgress(0);
@@ -113,6 +116,9 @@ export const ScriptGeneratorScreen: React.FC = () => {
 
       // 保存到本地
       await saveCustomScript(script);
+
+      // 生成成功后扣除积分
+      await pc.consume();
 
       // 后台预生成场景还原视频
       generateVideoInBackground(script);
@@ -210,28 +216,33 @@ export const ScriptGeneratorScreen: React.FC = () => {
 
         {/* 生成按钮 */}
         {!isGenerating && (
-          <TouchableOpacity
-            style={[
-              styles.generateButton,
-              !selectedGenre && styles.generateButtonDisabled,
-            ]}
-            onPress={handleGenerate}
-            disabled={!selectedGenre}
-          >
-            <LinearGradient
-              colors={
-                selectedGenre
-                  ? [COLORS.primary, COLORS.accent]
-                  : ['#555', '#666']
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.generateButtonGradient}
+          <>
+            <TouchableOpacity
+              style={[
+                styles.generateButton,
+                !selectedGenre && styles.generateButtonDisabled,
+              ]}
+              onPress={handleGenerate}
+              disabled={!selectedGenre}
             >
-              <Feather name="zap" size={24} color={COLORS.textLight} />
-              <Text style={styles.generateButtonText}>开始生成剧本</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={
+                  selectedGenre
+                    ? [COLORS.primary, COLORS.accent]
+                    : ['#555', '#666']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.generateButtonGradient}
+              >
+                <Feather name="zap" size={24} color={COLORS.textLight} />
+                <Text style={styles.generateButtonText}>开始生成剧本</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={[styles.costHint, !pc.hasEnoughPoints && styles.costHintInsufficient]}>
+              消耗 {pc.actualCost} 积分 · 余额 {pc.points} 积分
+            </Text>
+          </>
         )}
 
         {/* 生成进度 */}
@@ -387,6 +398,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: COLORS.textLight,
+  },
+  costHint: {
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: SPACING.md,
+    fontSize: 13,
+    color: COLORS.textGray,
+  },
+  costHintInsufficient: {
+    color: '#e74c3c',
   },
   progressCard: {
     backgroundColor: COLORS.cardBg,

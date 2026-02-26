@@ -79,7 +79,8 @@ export interface Order {
 // 积分消费项目
 export interface PointsCost {
   scriptGeneration: number; // 生成剧本
-  aiConversation: number; // AI对话（每条消息）
-  imageGeneration: number; // 生成图片
-  groupDiscussion: number; // 群聊讨论（每轮）
+  aiConversation: number;   // AI对话（每条消息）
 }
+
+// 积分消费功能 key
+export type PointsCostKey = keyof PointsCost;

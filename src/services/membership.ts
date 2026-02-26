@@ -105,12 +105,24 @@ export const RECHARGE_PACKAGES: RechargePackage[] = [
   },
 ];
 
-// 积分消费配置
+/**
+ * 积分消费基础配置（会员折扣在 consumePoints 中自动应用）
+ *
+ * 会员折扣：
+ *   免费会员 × 1.0（无折扣）
+ *   基础会员 × 0.9（9折）
+ *   高级会员 × 0.8（8折）
+ *   VIP      × 0.7（7折）
+ */
 export const POINTS_COST: PointsCost = {
-  scriptGeneration: 50, // 生成剧本
-  aiConversation: 2, // AI对话（每条消息）
-  imageGeneration: 10, // 生成图片
-  groupDiscussion: 5, // 群聊讨论（每轮）
+  scriptGeneration: 50, // AI 剧本生成
+  aiConversation: 2,    // AI 对话（每条消息）
+};
+
+// 功能中文名称（用于扣分描述）
+export const FEATURE_NAMES: Record<string, string> = {
+  scriptGeneration: 'AI剧本生成',
+  aiConversation: 'AI对话',
 };
 
 // 获取会员信息
