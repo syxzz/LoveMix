@@ -32,6 +32,7 @@ import { ScriptGeneratorScreen } from './src/screens/ScriptGeneratorScreen';
 import { GameScreen } from './src/screens/GameScreen';
 import { ClueScreen } from './src/screens/ClueScreen';
 import { DialogScreen } from './src/screens/DialogScreen';
+import { GroupDiscussScreen } from './src/screens/GroupDiscussScreen';
 import { VoteScreen } from './src/screens/VoteScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
 
@@ -149,6 +150,7 @@ const Navigation: React.FC = () => {
       <Stack.Screen name="Game" component={GameScreen} />
       <Stack.Screen name="Clue" component={ClueScreen} />
       <Stack.Screen name="Dialog" component={DialogScreen} />
+      <Stack.Screen name="GroupDiscuss" component={GroupDiscussScreen} />
       <Stack.Screen name="Vote" component={VoteScreen} />
       <Stack.Screen name="Result" component={ResultScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />

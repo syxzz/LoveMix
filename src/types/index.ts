@@ -70,6 +70,7 @@ export type RootStackParamList = {
   Game: { scriptId: string; characterId: string };
   Clue: undefined;
   Dialog: { characterId?: string; scriptId: string };
+  GroupDiscuss: { scriptId: string };
   Vote: undefined;
   Result: { success: boolean };
   Settings: undefined;

@@ -233,8 +233,25 @@ export const GameScreen: React.FC = () => {
     }
   };
 
+  const handlePreviousPhase = async () => {
+    const phases: GamePhase[] = ['intro', 'search', 'discuss', 'vote', 'result'];
+    const currentIndex = phases.indexOf(currentPhase);
+
+    if (currentIndex > 0) {
+      const previousPhase = phases[currentIndex - 1];
+      setCurrentPhase(previousPhase);
+
+      // 保存进度
+      const progress = await getGameProgress(scriptId);
+      if (progress) {
+        progress.currentPhase = previousPhase;
+        await saveGameProgress(progress);
+      }
+    }
+  };
+
   const handleViewClues = () => {
-    navigation.navigate('Clue', {});
+    navigation.navigate('Clue');
   };
 
   const handleDialog = (targetCharacterId?: string) => {
@@ -245,7 +262,7 @@ export const GameScreen: React.FC = () => {
   };
 
   const handleVote = () => {
-    navigation.navigate('Vote', {});
+    navigation.navigate('Vote');
   };
 
   const handleViewCharacter = () => {
@@ -454,9 +471,10 @@ export const GameScreen: React.FC = () => {
                 </LinearGradient>
               </TouchableOpacity>
 
+              {/* 进入群聊讨论 */}
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => handleDialog()}
+                onPress={() => navigation.navigate('GroupDiscuss', { scriptId })}
               >
                 <LinearGradient
                   colors={[COLORS.primary, COLORS.accent]}
@@ -465,7 +483,7 @@ export const GameScreen: React.FC = () => {
                   style={styles.actionButtonGradient}
                 >
                   <Feather name="users" size={24} color={COLORS.textLight} />
-                  <Text style={styles.actionButtonText}>{t('game.allCharacters')}</Text>
+                  <Text style={styles.actionButtonText}>进入群聊讨论</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </>
@@ -490,16 +508,30 @@ export const GameScreen: React.FC = () => {
           )}
         </View>
 
-        {/* 下一阶段按钮 */}
-        {currentPhase !== 'result' && currentPhase !== 'vote' && (
-          <TouchableOpacity
-            style={styles.nextPhaseButton}
-            onPress={handleNextPhase}
-          >
-            <Text style={styles.nextPhaseText}>{t('game.nextPhase')}</Text>
-            <Feather name="arrow-right" size={20} color={COLORS.accent} />
-          </TouchableOpacity>
-        )}
+        {/* 阶段导航按钮 */}
+        <View style={styles.phaseNavigationContainer}>
+          {/* 上一阶段按钮 */}
+          {currentPhase !== 'intro' && (
+            <TouchableOpacity
+              style={[styles.phaseNavButton, styles.previousPhaseButton]}
+              onPress={handlePreviousPhase}
+            >
+              <Feather name="arrow-left" size={20} color={COLORS.accent} />
+              <Text style={styles.phaseNavText}>上一阶段</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* 下一阶段按钮 */}
+          {currentPhase !== 'result' && currentPhase !== 'vote' && (
+            <TouchableOpacity
+              style={[styles.phaseNavButton, styles.nextPhaseButton]}
+              onPress={handleNextPhase}
+            >
+              <Text style={styles.phaseNavText}>{t('game.nextPhase')}</Text>
+              <Feather name="arrow-right" size={20} color={COLORS.accent} />
+            </TouchableOpacity>
+          )}
+        </View>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -690,21 +722,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textLight,
   },
-  nextPhaseButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: RADIUS.medium,
-    borderWidth: 2,
-    borderColor: COLORS.accent,
-    gap: 8,
-  },
-  nextPhaseText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.accent,
-  },
   bottomSpacer: {
     height: 40,
   },
@@ -740,6 +757,33 @@ const styles = StyleSheet.create({
   },
   dot: {
     fontSize: 20,
+    color: COLORS.accent,
+  },
+  phaseNavigationContainer: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    justifyContent: 'space-between',
+  },
+  phaseNavButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: RADIUS.medium,
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+    gap: 8,
+  },
+  previousPhaseButton: {
+    borderColor: COLORS.textGray,
+  },
+  nextPhaseButton: {
+    // Uses default accent color
+  },
+  phaseNavText: {
+    fontSize: 16,
+    fontWeight: '600',
     color: COLORS.accent,
   },
 });

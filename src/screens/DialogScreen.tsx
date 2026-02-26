@@ -139,15 +139,26 @@ export const DialogScreen: React.FC = () => {
         const targetChar = scriptData.characters.find(c => c.id === characterId);
         if (targetChar) {
           setTargetCharacter(targetChar);
-          setMessages([
-            {
-              id: '1',
-              role: 'character',
-              characterId: targetChar.id,
-              content: `你好，我是${targetChar.name}。有什么想问我的吗？`,
-              timestamp: Date.now(),
-            },
-          ]);
+
+          // 加载历史对话
+          const existingHistory = progress.conversationHistory?.filter(
+            msg => msg.characterId === targetChar.id
+          ) || [];
+
+          if (existingHistory.length > 0) {
+            setMessages(existingHistory);
+          } else {
+            // 首次对话，AI生成开场白
+            setMessages([
+              {
+                id: '1',
+                role: 'character',
+                characterId: targetChar.id,
+                content: `你好，我是${targetChar.name}。有什么想问我的吗？`,
+                timestamp: Date.now(),
+              },
+            ]);
+          }
         }
       } else {
         // 与DM对话
@@ -257,7 +268,16 @@ export const DialogScreen: React.FC = () => {
       // 保存对话历史（使用更新后的消息列表）
       const progress = await getGameProgress(script.id);
       if (progress) {
-        progress.conversationHistory = [...messages, userMessage, aiMessage];
+        // 移除当前角色的旧对话记录
+        const otherConversations = progress.conversationHistory.filter(
+          msg => targetCharacter ? msg.characterId !== targetCharacter.id : msg.role !== 'dm'
+        );
+
+        // 添加当前对话的所有消息
+        const currentConversation = [...messages, userMessage, aiMessage];
+
+        // 合并所有对话
+        progress.conversationHistory = [...otherConversations, ...currentConversation];
         await saveGameProgress(progress);
       }
     } catch (error: any) {
