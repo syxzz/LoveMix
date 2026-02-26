@@ -57,7 +57,7 @@ export const MEMBERSHIP_TIERS: MembershipTierConfig[] = [
     benefits: ['所有高级权益', '积分7折优惠', '专属徽章', '优先体验新功能', '定制服务'],
     pointsDiscount: 0.7,
     color: '#f39c12',
-    icon: 'crown',
+    icon: 'zap',
   },
 ];
 

@@ -14,8 +14,16 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, Membership, Transaction } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
@@ -52,9 +60,75 @@ export const MembershipScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
+  // Reanimated 动画：卡片呼吸、shimmer 扫光、文字脉动、旋转圈
+  const cardScale = useSharedValue(1);
+  const cardOpacity = useSharedValue(1);
+  const shimmerX = useSharedValue(-140);
+  const textOpacity = useSharedValue(0.7);
+  const spinnerRotate = useSharedValue(0);
+
+  // 每次页面获得焦点时刷新（含从充值页返回），保证积分余额立即更新
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
+
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!loading) return;
+    const easing = Easing.bezier(0.4, 0, 0.2, 1);
+    cardScale.value = withRepeat(
+      withSequence(
+        withTiming(1.03, { duration: 1200, easing }),
+        withTiming(1, { duration: 1200, easing })
+      ),
+      -1,
+      true
+    );
+    cardOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.92, { duration: 1200, easing }),
+        withTiming(1, { duration: 1200, easing })
+      ),
+      -1,
+      true
+    );
+    shimmerX.value = withRepeat(
+      withSequence(
+        withTiming(280, { duration: 1400, easing }),
+        withTiming(-140, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+    textOpacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 600, easing }),
+        withTiming(0.6, { duration: 600, easing })
+      ),
+      -1,
+      true
+    );
+    spinnerRotate.value = withRepeat(
+      withTiming(360, { duration: 1000, easing: Easing.linear }),
+      -1,
+      false
+    );
+  }, [loading, cardScale, cardOpacity, shimmerX, textOpacity, spinnerRotate]);
+
+  const animatedCardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: cardScale.value }],
+    opacity: cardOpacity.value,
+  }));
+  const animatedShimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shimmerX.value }],
+  }));
+  const animatedTextStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+  }));
+  const animatedSpinnerStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${spinnerRotate.value}deg` }],
+  }));
 
   const loadData = async () => {
     try {
@@ -150,7 +224,32 @@ export const MembershipScreen: React.FC = () => {
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>加载中...</Text>
+          <Animated.View style={[styles.loadingCardWrap, animatedCardStyle]}>
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.secondary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.loadingCard}
+            >
+              <Animated.View style={[styles.loadingSpinnerRing, animatedSpinnerStyle]} />
+              <Animated.Text style={[styles.loadingText, animatedTextStyle]}>
+                正在加载会员信息...
+              </Animated.Text>
+              <View style={styles.loadingSkeletons} collapsable={false}>
+                <View style={[styles.skeletonLine, styles.skeletonLineWide]} />
+                <View style={[styles.skeletonLine, styles.skeletonLineMid]} />
+                <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+                <Animated.View style={[styles.shimmerStrip, animatedShimmerStyle]}>
+                  <LinearGradient
+                    colors={['transparent', 'rgba(255,255,255,0.45)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+              </View>
+            </LinearGradient>
+          </Animated.View>
         </View>
       </View>
     );
@@ -362,11 +461,63 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+  loadingCardWrap: {
+    width: '100%',
+    maxWidth: 320,
+  },
+  loadingCard: {
+    width: '100%',
+    borderRadius: RADIUS.large,
+    padding: SPACING.xxl,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  loadingSpinnerRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderTopColor: COLORS.textLight,
+    marginBottom: SPACING.lg,
   },
   loadingText: {
-    fontSize: 14,
-    color: COLORS.textGray,
-    marginTop: SPACING.md,
+    fontSize: 15,
+    color: COLORS.textLight,
+    marginBottom: SPACING.xl,
+  },
+  loadingSkeletons: {
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: 56,
+  },
+  skeletonLine: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: '80%',
+    alignSelf: 'center',
+    marginBottom: SPACING.sm,
+  },
+  skeletonLineWide: {
+    width: '95%',
+  },
+  skeletonLineMid: {
+    width: '75%',
+  },
+  skeletonLineShort: {
+    width: '60%',
+  },
+  shimmerStrip: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 140,
+    height: 80,
+    zIndex: 1,
   },
   scrollView: {
     flex: 1,
