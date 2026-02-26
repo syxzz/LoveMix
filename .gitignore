@@ -38,5 +38,8 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/ios
+/ios/*
+!/ios/LoveMix/
+/ios/LoveMix/*
+!/ios/LoveMix/Info.plist
 /android
