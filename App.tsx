@@ -35,6 +35,7 @@ import { DialogScreen } from './src/screens/DialogScreen';
 import { GroupDiscussScreen } from './src/screens/GroupDiscussScreen';
 import { VoteScreen } from './src/screens/VoteScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
+import { RechargeScreen } from './src/screens/RechargeScreen';
 
 import { RootStackParamList } from './src/types';
 import { userAtom, isAuthenticatedAtom, authLoadingAtom } from './src/store';
@@ -156,6 +157,7 @@ const Navigation: React.FC = () => {
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="History" component={HistoryScreen} />
       <Stack.Screen name="Membership" component={MembershipScreen} />
+      <Stack.Screen name="Recharge" component={RechargeScreen} />
       <Stack.Screen name="Community" component={CommunityScreen} />
     </Stack.Navigator>
   );

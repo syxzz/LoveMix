@@ -75,6 +75,10 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('ScriptGenerator');
   };
 
+  const handleMembershipPress = () => {
+    navigation.navigate('Membership');
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'easy':
@@ -106,6 +110,13 @@ export const HomeScreen: React.FC = () => {
           </View>
 
           <View style={styles.rightSection}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleMembershipPress}
+            >
+              <Feather name="award" size={22} color={COLORS.accent} />
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.iconButton}
               onPress={handleSettingsPress}

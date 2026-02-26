@@ -1,8 +1,9 @@
 /**
- * MembershipScreen - 会员订阅页面
+ * MembershipScreen - 会员中心页面
+ * 显示会员信息、积分余额、会员权益等
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,217 +11,322 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { useAtom } from 'jotai';
-import { GradientButton } from '../components/GradientButton';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList, Membership, Transaction } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
-import { userAtom } from '../store';
-import { updateUser } from '../services/auth';
 import { Feather } from '@expo/vector-icons';
-import { MembershipType } from '../types';
+import {
+  getMembership,
+  getTransactions,
+  MEMBERSHIP_TIERS,
+  getTierConfig,
+  isMembershipExpired,
+  getMembershipDaysLeft,
+  upgradeMembership,
+} from '../services/firebase-membership';
+import { getCurrentUserId } from '../services/firebaseAuthService';
+import { USE_FIREBASE } from '../config';
+import type { MembershipTier } from '../types/membership';
 
-interface MembershipPlan {
-  type: MembershipType;
-  name: string;
-  price: string;
-  duration: string;
-  features: string[];
-  popular?: boolean;
-}
+// 会员等级顺序，用于判断升级/降级
+const TIER_ORDER: Record<MembershipTier, number> = {
+  free: 0,
+  basic: 1,
+  premium: 2,
+  vip: 3,
+};
 
-const MEMBERSHIP_PLANS: MembershipPlan[] = [
-  {
-    type: 'free',
-    name: '免费版',
-    price: '¥0',
-    duration: '永久',
-    features: [
-      '每日3次AI生成',
-      '基础功能使用',
-      '标准画质输出',
-      '社区浏览',
-    ],
-  },
-  {
-    type: 'premium',
-    name: '高级会员',
-    price: '¥19.9',
-    duration: '/月',
-    popular: true,
-    features: [
-      '每日20次AI生成',
-      '全部功能解锁',
-      '高清画质输出',
-      '优先生成队列',
-      '无水印下载',
-      '社区发布作品',
-    ],
-  },
-  {
-    type: 'vip',
-    name: 'VIP会员',
-    price: '¥99',
-    duration: '/年',
-    features: [
-      '无限次AI生成',
-      '全部功能解锁',
-      '超高清画质输出',
-      '最高优先级',
-      '无水印下载',
-      '社区发布作品',
-      '专属客服支持',
-      '独家模板素材',
-    ],
-  },
-];
+type MembershipScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Membership'>;
 
 export const MembershipScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const [user, setUser] = useAtom(userAtom);
-  const [selectedPlan, setSelectedPlan] = useState<MembershipType | null>(null);
-  const [loading, setLoading] = useState(false);
+  const navigation = useNavigation<MembershipScreenNavigationProp>();
 
-  const handleSubscribe = async (plan: MembershipPlan) => {
-    if (plan.type === 'free') {
-      Alert.alert('提示', '您已经是免费会员');
-      return;
+  const [membership, setMembership] = useState<Membership | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      // 使用当前登录用户 ID（Firebase 已启用时），否则用测试 ID
+      let userId = 'test_user_001';
+      if (USE_FIREBASE) {
+        try {
+          userId = getCurrentUserId();
+        } catch {
+          // 未登录时保持测试用户
+        }
+      }
+      const membershipData = await getMembership(userId);
+      const transactionsData = await getTransactions(userId);
+
+      setMembership(membershipData);
+      setTransactions(transactionsData.slice(0, 10)); // 只显示最近10条
+    } catch (error) {
+      console.error('加载会员数据失败:', error);
+      Alert.alert('错误', '加载失败，请重试');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-
-    if (user?.membershipType === plan.type) {
-      Alert.alert('提示', '您已经订阅了该会员');
-      return;
-    }
-
-    Alert.alert(
-      '确认订阅',
-      `确定要订阅${plan.name}吗？\n价格：${plan.price}${plan.duration}`,
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '确定',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              // 模拟支付流程
-              await new Promise((resolve) => setTimeout(resolve, 1500));
-
-              const expiryDate = new Date();
-              if (plan.type === 'premium') {
-                expiryDate.setMonth(expiryDate.getMonth() + 1);
-              } else if (plan.type === 'vip') {
-                expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-              }
-
-              const updatedUser = await updateUser({
-                membershipType: plan.type,
-                membershipExpiry: expiryDate.toISOString(),
-              });
-              setUser(updatedUser);
-
-              Alert.alert('订阅成功', `恭喜您成为${plan.name}！`, [
-                {
-                  text: '确定',
-                  onPress: () => navigation.goBack(),
-                },
-              ]);
-            } catch (error: any) {
-              Alert.alert('订阅失败', error.message || '请稍后重试');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
   };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  const handleRecharge = () => {
+    navigation.navigate('Recharge');
+  };
+
+  const getUserId = (): string => {
+    if (!USE_FIREBASE) return 'test_user_001';
+    try {
+      return getCurrentUserId();
+    } catch {
+      return 'test_user_001';
+    }
+  };
+
+  const handleUpgradeTier = (tier: MembershipTier) => {
+    if (!membership) return;
+    const currentOrder = TIER_ORDER[membership.tier];
+    const targetOrder = TIER_ORDER[tier];
+    const tierConfig = MEMBERSHIP_TIERS.find(t => t.tier === tier);
+    if (!tierConfig) return;
+
+    if (currentOrder === targetOrder) {
+      Alert.alert('提示', '您已是该等级会员');
+      return;
+    }
+    if (targetOrder < currentOrder) {
+      Alert.alert('提示', '暂不支持降级，如有需要请联系客服');
+      return;
+    }
+
+    const message = `升级为「${tierConfig.name}」\n· 月费 ¥${tierConfig.price}/月\n· 有效期 30 天\n· 积分消费享 ${Math.round(tierConfig.pointsDiscount * 10)} 折\n确认支付？`;
+    Alert.alert('确认升级', message, [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '确认支付',
+        onPress: async () => {
+          try {
+            setUpgradeLoading(true);
+            const userId = getUserId();
+            await upgradeMembership(userId, tier, 30);
+            await loadData();
+            Alert.alert('升级成功', `您已成功升级为${tierConfig.name}，有效期 30 天`);
+          } catch (error: any) {
+            console.error('升级失败:', error);
+            Alert.alert('升级失败', error?.message || '请稍后重试');
+          } finally {
+            setUpgradeLoading(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleUpgrade = () => {
+    Alert.alert('升级会员', '请在下方向上选择要升级的会员等级，点击卡片并确认支付即可。');
+  };
+
+  if (loading || !membership) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[COLORS.background, COLORS.secondary]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>加载中...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const tierConfig = getTierConfig(membership.tier);
+  const isExpired = isMembershipExpired(membership);
+  const daysLeft = getMembershipDaysLeft(membership);
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={[COLORS.background, COLORS.secondary]}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* 顶部导航 */}
       <LinearGradient
         colors={[COLORS.primary, COLORS.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>会员订阅</Text>
+        <Text style={styles.headerTitle}>会员中心</Text>
         <View style={styles.placeholder} />
       </LinearGradient>
 
       <ScrollView
-        style={styles.content}
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.accent} />
+        }
       >
-        <Text style={styles.sectionTitle}>选择适合您的会员方案</Text>
-
-        {MEMBERSHIP_PLANS.map((plan) => (
-          <TouchableOpacity
-            key={plan.type}
-            style={[
-              styles.planCard,
-              plan.popular && styles.planCardPopular,
-              user?.membershipType === plan.type && styles.planCardActive,
-            ]}
-            onPress={() => setSelectedPlan(plan.type)}
-            activeOpacity={0.8}
-          >
-            {plan.popular && (
-              <View style={styles.popularBadge}>
-                <Text style={styles.popularText}>最受欢迎</Text>
-              </View>
-            )}
-
-            {user?.membershipType === plan.type && (
-              <View style={styles.activeBadge}>
-                <Feather name="check-circle" size={20} color={COLORS.primary} />
-                <Text style={styles.activeText}>当前方案</Text>
-              </View>
-            )}
-
-            <View style={styles.planHeader}>
-              <Text style={styles.planName}>{plan.name}</Text>
-              <View style={styles.priceContainer}>
-                <Text style={styles.planPrice}>{plan.price}</Text>
-                <Text style={styles.planDuration}>{plan.duration}</Text>
-              </View>
+        {/* 会员卡片 */}
+        <LinearGradient
+          colors={[tierConfig?.color || COLORS.primary, COLORS.secondary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.memberCard}
+        >
+          <View style={styles.memberCardHeader}>
+            <View style={styles.memberTierBadge}>
+              <Feather name={tierConfig?.icon as any || 'user'} size={20} color={COLORS.textLight} />
+              <Text style={styles.memberTierText}>{tierConfig?.name}</Text>
             </View>
+            {membership.tier !== 'free' && (
+              <Text style={styles.memberExpireText}>
+                {isExpired ? '已过期' : `剩余${daysLeft}天`}
+              </Text>
+            )}
+          </View>
 
-            <View style={styles.featuresContainer}>
-              {plan.features.map((feature, index) => (
-                <View key={index} style={styles.featureItem}>
-                  <Feather name="check" size={16} color={COLORS.primary} />
-                  <Text style={styles.featureText}>{feature}</Text>
+          <View style={styles.pointsContainer}>
+            <Text style={styles.pointsLabel}>积分余额</Text>
+            <Text style={styles.pointsValue}>{membership.points}</Text>
+          </View>
+
+          <View style={styles.cardActions}>
+            <TouchableOpacity style={styles.cardButton} onPress={handleRecharge}>
+              <Feather name="plus-circle" size={18} color={COLORS.textLight} />
+              <Text style={styles.cardButtonText}>充值</Text>
+            </TouchableOpacity>
+            {membership.tier !== 'vip' && (
+              <TouchableOpacity style={styles.cardButton} onPress={handleUpgrade} disabled={upgradeLoading}>
+                <Feather name="arrow-up-circle" size={18} color={COLORS.textLight} />
+                <Text style={styles.cardButtonText}>升级</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </LinearGradient>
+
+        {/* 会员权益 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>会员权益</Text>
+          <View style={styles.benefitsContainer}>
+            {tierConfig?.benefits.map((benefit, index) => (
+              <View key={index} style={styles.benefitItem}>
+                <Feather name="check-circle" size={16} color={COLORS.accent} />
+                <Text style={styles.benefitText}>{benefit}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* 会员等级对比 */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>会员等级</Text>
+            {upgradeLoading && (
+              <ActivityIndicator size="small" color={COLORS.accent} style={styles.upgradeIndicator} />
+            )}
+          </View>
+          <View style={styles.tiersContainer}>
+            {MEMBERSHIP_TIERS.filter(t => t.tier !== 'free').map((tier) => (
+              <TouchableOpacity
+                key={tier.tier}
+                style={[
+                  styles.tierCard,
+                  membership.tier === tier.tier && styles.tierCardActive,
+                ]}
+                onPress={() => handleUpgradeTier(tier.tier)}
+                disabled={upgradeLoading}
+              >
+                <LinearGradient
+                  colors={[tier.color, COLORS.secondary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.tierCardGradient}
+                >
+                  <Feather name={tier.icon as any} size={24} color={COLORS.textLight} />
+                  <Text style={styles.tierName}>{tier.name}</Text>
+                  <Text style={styles.tierPrice}>¥{tier.price}/月</Text>
+                  <Text style={styles.tierDiscount}>积分{Math.round((1 - tier.pointsDiscount) * 10)}折</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* 交易记录 */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>交易记录</Text>
+            <TouchableOpacity>
+              <Text style={styles.sectionMore}>查看全部</Text>
+            </TouchableOpacity>
+          </View>
+          {transactions.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Feather name="inbox" size={48} color={COLORS.textGray} />
+              <Text style={styles.emptyText}>暂无交易记录</Text>
+            </View>
+          ) : (
+            <View style={styles.transactionsContainer}>
+              {transactions.map((transaction) => (
+                <View key={transaction.id} style={styles.transactionItem}>
+                  <View style={styles.transactionLeft}>
+                    <Feather
+                      name={
+                        transaction.type === 'recharge'
+                          ? 'arrow-down-circle'
+                          : transaction.type === 'consume'
+                          ? 'arrow-up-circle'
+                          : 'gift'
+                      }
+                      size={20}
+                      color={
+                        transaction.amount > 0 ? COLORS.success : COLORS.error
+                      }
+                    />
+                    <View style={styles.transactionInfo}>
+                      <Text style={styles.transactionDesc}>{transaction.description}</Text>
+                      <Text style={styles.transactionTime}>
+                        {new Date(transaction.timestamp).toLocaleString('zh-CN')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text
+                    style={[
+                      styles.transactionAmount,
+                      transaction.amount > 0 ? styles.amountPositive : styles.amountNegative,
+                    ]}
+                  >
+                    {transaction.amount > 0 ? '+' : ''}{transaction.amount}
+                  </Text>
                 </View>
               ))}
             </View>
-
-            {user?.membershipType !== plan.type && (
-              <GradientButton
-                title={plan.type === 'free' ? '当前方案' : '立即订阅'}
-                onPress={() => handleSubscribe(plan)}
-                loading={loading && selectedPlan === plan.type}
-                disabled={loading}
-              />
-            )}
-          </TouchableOpacity>
-        ))}
-
-        <View style={styles.noteSection}>
-          <Text style={styles.noteTitle}>订阅说明</Text>
-          <Text style={styles.noteText}>
-            • 订阅后立即生效，可享受对应会员权益{'\n'}
-            • 会员到期后自动降级为免费版{'\n'}
-            • 支持随时升级会员套餐{'\n'}
-            • 如有问题请联系客服
-          </Text>
+          )}
         </View>
+
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </View>
   );
@@ -229,15 +335,14 @@ export const MembershipScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   header: {
-    height: 120,
-    paddingTop: 50,
-    paddingHorizontal: SPACING.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: SPACING.lg,
   },
   backButton: {
     width: 40,
@@ -246,122 +351,210 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.textLight,
   },
   placeholder: {
     width: 40,
   },
-  content: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.textGray,
+    marginTop: SPACING.md,
+  },
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: SPACING.lg,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    marginBottom: SPACING.lg,
-    textAlign: 'center',
-  },
-  planCard: {
-    backgroundColor: COLORS.background,
+  memberCard: {
     borderRadius: RADIUS.large,
-    padding: SPACING.lg,
+    padding: SPACING.xl,
     marginBottom: SPACING.lg,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  planCardPopular: {
-    borderColor: COLORS.primary,
+  memberCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
   },
-  planCardActive: {
-    backgroundColor: '#FFF9FB',
-    borderColor: COLORS.primary,
+  memberTierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  popularBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 20,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+  memberTierText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
   },
-  popularText: {
+  memberExpireText: {
     fontSize: 12,
+    color: COLORS.textLight,
+    opacity: 0.8,
+  },
+  pointsContainer: {
+    marginBottom: SPACING.lg,
+  },
+  pointsLabel: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    opacity: 0.8,
+    marginBottom: 4,
+  },
+  pointsValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  cardButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: SPACING.sm,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: RADIUS.medium,
+  },
+  cardButtonText: {
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.textLight,
   },
-  activeBadge: {
+  section: {
+    marginBottom: SPACING.xl,
+  },
+  sectionHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.textDark,
+  },
+  upgradeIndicator: {
+    marginLeft: SPACING.sm,
+  },
+  sectionMore: {
+    fontSize: 12,
+    color: COLORS.accent,
+  },
+  benefitsContainer: {
+    backgroundColor: 'rgba(139,71,137,0.1)',
+    borderRadius: RADIUS.medium,
+    padding: SPACING.md,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: SPACING.xs,
+  },
+  benefitText: {
+    fontSize: 14,
+    color: COLORS.textDark,
+  },
+  tiersContainer: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  tierCard: {
+    flex: 1,
+    borderRadius: RADIUS.medium,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  tierCardActive: {
+    borderColor: COLORS.accent,
+  },
+  tierCardGradient: {
+    padding: SPACING.md,
     alignItems: 'center',
     gap: 4,
-    marginBottom: SPACING.sm,
   },
-  activeText: {
+  tierName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  planHeader: {
-    marginBottom: SPACING.lg,
-  },
-  planName: {
-    fontSize: 24,
     fontWeight: 'bold',
-    color: COLORS.textDark,
-    marginBottom: 8,
+    color: COLORS.textLight,
+    marginTop: 4,
   },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  planPrice: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  planDuration: {
+  tierPrice: {
     fontSize: 16,
-    color: COLORS.textGray,
-    marginLeft: 4,
+    fontWeight: 'bold',
+    color: COLORS.textLight,
+    marginTop: 4,
   },
-  featuresContainer: {
-    marginBottom: SPACING.lg,
-    gap: SPACING.sm,
+  tierDiscount: {
+    fontSize: 11,
+    color: COLORS.textLight,
+    opacity: 0.8,
   },
-  featureItem: {
+  transactionsContainer: {
+    backgroundColor: 'rgba(139,71,137,0.1)',
+    borderRadius: RADIUS.medium,
+    padding: SPACING.sm,
+  },
+  transactionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  transactionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: 12,
+    flex: 1,
   },
-  featureText: {
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionDesc: {
     fontSize: 14,
     color: COLORS.textDark,
+    marginBottom: 2,
   },
-  noteSection: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: RADIUS.medium,
-    padding: SPACING.lg,
-    marginTop: SPACING.md,
+  transactionTime: {
+    fontSize: 11,
+    color: COLORS.textGray,
   },
-  noteTitle: {
+  transactionAmount: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    marginBottom: SPACING.sm,
+    fontWeight: 'bold',
   },
-  noteText: {
+  amountPositive: {
+    color: COLORS.success,
+  },
+  amountNegative: {
+    color: COLORS.error,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xl,
+  },
+  emptyText: {
     fontSize: 14,
     color: COLORS.textGray,
-    lineHeight: 22,
+    marginTop: SPACING.md,
+  },
+  bottomSpacer: {
+    height: 40,
   },
 });

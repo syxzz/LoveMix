@@ -7,6 +7,7 @@
 export * from './user';
 export * from './history';
 export * from './script';
+export * from './membership';
 
 // 图片选择结果类型
 export interface ImagePickerResult {
@@ -77,6 +78,7 @@ export type RootStackParamList = {
   Profile: undefined;
   History: undefined;
   Membership: undefined;
+  Recharge: undefined;
   Community: undefined;
 };
 
