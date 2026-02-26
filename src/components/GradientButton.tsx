@@ -57,7 +57,7 @@ export const GradientButton: React.FC<GradientButtonProps> = ({
         style={styles.touchable}
       >
         <LinearGradient
-          colors={[COLORS.primary, COLORS.secondary]}
+          colors={['#6B5CE7', '#8B7AFF']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[
@@ -94,8 +94,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   gradient: {
-    height: 56,
-    borderRadius: RADIUS.xlarge,
+    height: 52,
+    borderRadius: 16,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',

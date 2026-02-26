@@ -8,7 +8,7 @@ import { Script } from '../types';
 import { logger } from '../config';
 
 const VIDEO_API_BASE_URL = 'https://api-image.charaboard.com/v1/minimax';
-const API_KEY = 'cky_KQYbDHquDRJZBD27f09L';
+const API_KEY = 'cky_5OYHvtqWH89hP57Ugu4i';
 const VIDEO_CACHE_KEY = 'script_video_urls';
 
 const getVideoHeaders = () => ({
@@ -106,7 +106,7 @@ function buildVideoPrompt(script: Script): string {
     `The story: "${script.title}". ${truth} ` +
     `The murderer is ${murdererName}, a ${murdererOccupation}. ` +
     `Show the key moments: the motive, the crime being committed, and the evidence being discovered. ` +
-    `Dark cinematic lighting, suspenseful atmosphere, dramatic film noir style. ` +
+    `Vibrant anime-style cinematic lighting, suspenseful yet vivid atmosphere, dramatic storytelling. ` +
     `[Push in] on the critical moment, [Tracking shot] following the murderer, then [Static shot] on the evidence.`;
 }
 

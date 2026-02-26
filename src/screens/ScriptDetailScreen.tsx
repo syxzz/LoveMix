@@ -21,7 +21,7 @@ import { RootStackParamList, Script, Character } from '../types';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { getScriptById } from '../data/scripts';
 import { getGameProgress } from '../services/storage';
-import { ensureScriptCover, getCachedCoverSync, ensureCharacterAvatar, getCachedAvatarSync } from '../services/scriptInit';
+import { ensureScriptCover, getCachedCoverSync, ensureScriptCoverPortrait, getCachedCoverPortraitSync, ensureCharacterAvatar, getCachedAvatarSync } from '../services/scriptInit';
 import { Feather } from '@expo/vector-icons';
 
 type ScriptDetailScreenRouteProp = RouteProp<RootStackParamList, 'ScriptDetail'>;
@@ -50,18 +50,26 @@ export const ScriptDetailScreen: React.FC = () => {
     if (scriptData) {
       setScript(scriptData);
 
-      // 优先级1: 预设封面，立即显示
-      if (scriptData.coverImage) {
-        setCoverImage(scriptData.coverImage);
+      // 优先竖版封面，回退横版
+      if (scriptData.coverImagePortrait) {
+        setCoverImage(scriptData.coverImagePortrait);
       } else {
-        // 优先级2: 从内存缓存同步读取（零延迟）
-        const cachedCover = getCachedCoverSync(scriptData.id);
-        if (cachedCover) {
-          setCoverImage(cachedCover);
-          setImageLoading(false); // 缓存的图片，标记为已加载
+        const cachedPortrait = getCachedCoverPortraitSync(scriptData.id);
+        if (cachedPortrait) {
+          setCoverImage(cachedPortrait);
+          setImageLoading(false);
+        } else if (scriptData.coverImage) {
+          setCoverImage(scriptData.coverImage);
+          loadPortraitCoverAsync(scriptData);
         } else {
-          // 优先级3: 异步生成（首次访问）
-          loadCover(scriptData);
+          const cachedCover = getCachedCoverSync(scriptData.id);
+          if (cachedCover) {
+            setCoverImage(cachedCover);
+            setImageLoading(false);
+          } else {
+            loadCover(scriptData);
+          }
+          loadPortraitCoverAsync(scriptData);
         }
       }
 
@@ -116,6 +124,17 @@ export const ScriptDetailScreen: React.FC = () => {
     }
   };
 
+  const loadPortraitCoverAsync = async (scriptData: Script) => {
+    try {
+      const portrait = await ensureScriptCoverPortrait(scriptData);
+      if (portrait) {
+        setCoverImage(portrait);
+      }
+    } catch (error) {
+      console.error('加载竖版封面失败:', error);
+    }
+  };
+
   const loadCover = async (scriptData: Script) => {
     setIsLoadingCover(true);
     try {
@@ -159,21 +178,16 @@ export const ScriptDetailScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* 顶部导航 */}
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Feather name="arrow-left" size={24} color={COLORS.textLight} />
+          <Feather name="arrow-left" size={22} color={COLORS.textDark} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('scriptDetail.title')}</Text>
         <View style={styles.placeholder} />
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -200,7 +214,14 @@ export const ScriptDetailScreen: React.FC = () => {
                 resizeMode="cover"
                 onLoadStart={() => setImageLoading(true)}
                 onLoadEnd={() => setImageLoading(false)}
-                onError={() => setImageLoading(false)}
+                onError={(error) => {
+                  console.error('❌ 封面图片加载失败:', error.nativeEvent.error);
+                  console.log('封面 URI 前100字符:', coverImage.substring(0, 100));
+                  setImageLoading(false);
+                }}
+                onLoad={() => {
+                  console.log('✅ 封面图片加载成功');
+                }}
               />
             </>
           ) : (
@@ -249,6 +270,13 @@ export const ScriptDetailScreen: React.FC = () => {
                         source={{ uri: avatar }}
                         style={styles.avatar}
                         resizeMode="cover"
+                        onError={(error) => {
+                          console.error('❌ 角色头像加载失败:', character.name, error.nativeEvent.error);
+                          console.log('头像 URI 前100字符:', avatar.substring(0, 100));
+                        }}
+                        onLoad={() => {
+                          console.log('✅ 角色头像加载成功:', character.name);
+                        }}
                       />
                     ) : (
                       <View style={styles.avatarPlaceholder}>
@@ -288,7 +316,7 @@ export const ScriptDetailScreen: React.FC = () => {
           disabled={!selectedCharacter}
         >
           <LinearGradient
-            colors={selectedCharacter ? [COLORS.primary, COLORS.accent] : ['#666', '#444']}
+            colors={selectedCharacter ? ['#6B5CE7', '#8B7AFF'] : ['#3A3D52', '#2A2D42']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.startButtonGradient}
@@ -316,22 +344,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 16,
     paddingHorizontal: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(37,40,66,0.6)',
+    borderWidth: 1,
+    borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
     color: COLORS.textLight,
   },
   placeholder: {
-    width: 40,
+    width: 44,
   },
   scrollView: {
     flex: 1,
@@ -371,10 +405,11 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.md,
   },
   scriptTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 26,
     color: COLORS.textDark,
     marginBottom: SPACING.sm,
+    letterSpacing: 1,
   },
   scriptDescription: {
     fontSize: 16,

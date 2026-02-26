@@ -13,6 +13,8 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useFonts, Niconne_400Regular } from '@expo-google-fonts/niconne';
 import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { DancingScript_400Regular, DancingScript_700Bold } from '@expo-google-fonts/dancing-script';
+import { PlayfairDisplay_400Regular, PlayfairDisplay_500Medium, PlayfairDisplay_700Bold, PlayfairDisplay_400Regular_Italic } from '@expo-google-fonts/playfair-display';
+import { Cinzel_400Regular, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
 
 // 导入所有屏幕
 import {
@@ -44,7 +46,8 @@ import { COLORS } from './src/utils/constants';
 import { USE_FIREBASE } from './src/config';
 import './src/i18n'; // 初始化 i18n
 import { loadLanguage } from './src/i18n';
-import { initializeAllScriptCovers, preloadCoverCache, initializeScriptCharacterAvatars } from './src/services/scriptInit';
+import { initializeAllScriptCovers, preloadCoverCache, clearCoverCache, initializeScriptCharacterAvatars } from './src/services/scriptInit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateVideoInBackground } from './src/services/videoGeneration';
 import { getAllScripts, getAllScriptsSync } from './src/data/scripts';
 
@@ -89,18 +92,24 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, []);
 
   const initializeScriptCovers = async () => {
+    const COVER_STYLE_VERSION_KEY = 'cover_style_version';
+    const CURRENT_COVER_VERSION = 'anime_v2';
+
     try {
-      // 先预加载缓存到内存，加快后续访问速度
+      const savedVersion = await AsyncStorage.getItem(COVER_STYLE_VERSION_KEY);
+      if (savedVersion !== CURRENT_COVER_VERSION) {
+        console.log('🔄 封面风格版本变更，清除旧缓存重新生成...');
+        await clearCoverCache();
+        await AsyncStorage.setItem(COVER_STYLE_VERSION_KEY, CURRENT_COVER_VERSION);
+      }
+
       await preloadCoverCache();
 
-      // 后台静默初始化，不阻塞应用启动
       const scripts = await getAllScripts();
 
       for (const script of scripts) {
         initializeAllScriptCovers([script]);
         initializeScriptCharacterAvatars(script);
-
-        // 后台预生成场景还原视频
         generateVideoInBackground(script);
 
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -183,6 +192,12 @@ export default function App() {
     Poppins_700Bold,
     DancingScript_400Regular,
     DancingScript_700Bold,
+    PlayfairDisplay_400Regular,
+    PlayfairDisplay_500Medium,
+    PlayfairDisplay_700Bold,
+    PlayfairDisplay_400Regular_Italic,
+    Cinzel_400Regular,
+    Cinzel_700Bold,
   });
 
   if (!fontsLoaded) {

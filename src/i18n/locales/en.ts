@@ -19,8 +19,8 @@ export default {
 
   // Welcome
   welcome: {
-    appName: 'LoveMix',
-    tagline: 'AI-powered, capture every sweet moment',
+    appName: 'Mirrage',
+    tagline: 'Fiction reflects truth',
     startButton: 'Get Started',
     guestLogin: 'Quick Guest Access',
     guestSubtitle: 'No registration required',
@@ -32,7 +32,7 @@ export default {
   login: {
     title: 'Sign In',
     welcomeBack: 'Welcome Back',
-    subtitle: 'Sign in to continue using LoveMix',
+    subtitle: 'Continue your investigation',
     logoSubtext: 'Make love more fun',
     email: 'Email',
     emailPlaceholder: 'Email address',
@@ -125,7 +125,7 @@ export default {
     privacy: 'Privacy',
     privacyDesc: 'Privacy and security settings',
     about: 'About',
-    aboutDesc: 'About LoveMix',
+    aboutDesc: 'About Mirrage',
     version: 'Version',
     profile: 'Profile',
   },

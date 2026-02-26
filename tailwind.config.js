@@ -7,11 +7,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#FF69B4',
-        secondary: '#87CEEB',
-        background: '#FFFFFF',
-        cardBg: '#F8F9FA',
-        textDark: '#2C3E50',
+        primary: '#6B5CE7',
+        secondary: '#1B1F3B',
+        accent: '#C9A96E',
+        background: '#0C0E1A',
+        cardBg: '#1A1F38',
+        textDark: '#E8EAF0',
+        textGray: '#6B7194',
       },
       borderRadius: {
         'small': '12px',

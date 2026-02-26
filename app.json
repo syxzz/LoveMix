@@ -1,31 +1,31 @@
 {
   "expo": {
-    "name": "LoveMix",
-    "slug": "LoveMix",
+    "name": "Mirrage",
+    "slug": "mirrage",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0C0E1A"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lovemix.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "LoveMix需要访问您的相册以保存生成的图片",
-        "NSCameraUsageDescription": "LoveMix需要访问相机以拍摄照片",
-        "NSPhotoLibraryAddUsageDescription": "LoveMix需要访问您的相册以保存生成的图片"
+        "NSPhotoLibraryUsageDescription": "Mirrage需要访问您的相册以保存生成的图片",
+        "NSCameraUsageDescription": "Mirrage需要访问相机以拍摄照片",
+        "NSPhotoLibraryAddUsageDescription": "Mirrage需要访问您的相册以保存生成的图片"
       }
     },
     "android": {
       "package": "com.lovemix.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0C0E1A"
       },
       "permissions": [
         "CAMERA",

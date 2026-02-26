@@ -58,12 +58,9 @@ export const GameScreen: React.FC = () => {
   const dot2Anim = useRef(new Animated.Value(0.3)).current;
   const dot3Anim = useRef(new Animated.Value(0.3)).current;
 
-  // useEffect(() => {
-  //   loadGame();
-  //   return () => {
-  //     cleanupVideoTask();
-  //   };
-  // }, []);
+  useEffect(() => {
+    loadGame();
+  }, []);
 
   // 加载动画效果
   useEffect(() => {
@@ -370,6 +367,13 @@ export const GameScreen: React.FC = () => {
                   source={{ uri: introImage }}
                   style={styles.introImage}
                   resizeMode="cover"
+                  onError={(error) => {
+                    console.error('❌ 开场图片加载失败:', error.nativeEvent.error);
+                    console.log('开场图片 URI 前100字符:', introImage.substring(0, 100));
+                  }}
+                  onLoad={() => {
+                    console.log('✅ 开场图片加载成功');
+                  }}
                 />
               </View>
             )}
@@ -413,7 +417,7 @@ export const GameScreen: React.FC = () => {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
+            colors={['rgba(107, 92, 231, 0.3)', 'rgba(27, 31, 59, 0.3)']}
             style={styles.cardGradient}
           />
           <View style={styles.characterCardContent}>

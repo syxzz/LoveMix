@@ -19,8 +19,8 @@ export default {
 
   // 欢迎页
   welcome: {
-    appName: 'LoveMix',
-    tagline: 'AI 赋能，记录每一个甜蜜瞬间',
+    appName: 'Mirrage',
+    tagline: '镜像蜃景，剧本是假，折射的真',
     startButton: '开始创作',
     guestLogin: '游客快速体验',
     guestSubtitle: '无需注册，立即使用',
@@ -32,7 +32,7 @@ export default {
   login: {
     title: '登录',
     welcomeBack: '欢迎回来',
-    subtitle: '登录继续使用 LoveMix',
+    subtitle: '登录继续你的推理之旅',
     logoSubtext: '让爱更有趣',
     email: '邮箱',
     emailPlaceholder: '邮箱地址',
@@ -125,7 +125,7 @@ export default {
     privacy: '隐私',
     privacyDesc: '隐私和安全设置',
     about: '关于',
-    aboutDesc: '关于 LoveMix',
+    aboutDesc: '关于 Mirrage',
     version: '版本',
     profile: '个人资料',
   },

@@ -3,23 +3,23 @@
  * 包含颜色、尺寸、游戏配置等所有常量
  */
 
-// 颜色常量 - 剧本杀悬疑主题
+// 颜色常量 - 沉浸悬疑主题（精致暗色系）
 export const COLORS = {
-  primary: '#8B4789',      // 神秘紫
-  secondary: '#2C3E50',    // 深蓝灰
-  accent: '#D4AF37',       // 金色
-  background: '#1A1A2E',   // 深色背景
-  cardBg: '#16213E',       // 卡片背景
-  textDark: '#E8E8E8',     // 浅色文字
-  textLight: '#FFFFFF',    // 白色文字
-  textGray: '#A0A0A0',     // 灰色文字
-  border: '#3A3A52',       // 边框色
-  error: '#E74C3C',        // 错误红
-  success: '#27AE60',      // 成功绿
-  warning: '#F39C12',      // 警告橙
-  clueImportant: '#E74C3C', // 重要线索
-  clueKey: '#F39C12',      // 关键线索
-  clueNormal: '#3498DB',   // 普通线索
+  primary: '#6B5CE7',      // 深邃靛紫
+  secondary: '#1B1F3B',    // 深海蓝
+  accent: '#C9A96E',       // 香槟金
+  background: '#0C0E1A',   // 近黑底色
+  cardBg: '#1A1F38',       // 暗色卡片（微提亮）
+  textDark: '#E8EAF0',     // 柔白文字
+  textLight: '#F5F5F7',    // 亮白文字
+  textGray: '#6B7194',     // 静谧灰
+  border: '#2A2F4E',       // 低调边框（微提亮）
+  error: '#EF4444',        // 错误红
+  success: '#22C55E',      // 成功绿
+  warning: '#F59E0B',      // 警告橙
+  clueImportant: '#EF4444',
+  clueKey: '#F59E0B',
+  clueNormal: '#60A5FA',
 };
 
 // 圆角常量

@@ -5,8 +5,8 @@
 export default {
   // ウェルカムページ
   welcome: {
-    appName: 'AIマーダーミステリー',
-    tagline: 'AI駆動の一人用推理ゲーム',
+    appName: 'Mirrage',
+    tagline: '鏡像蜃気楼、脚本は虚構、真実の屈折',
     startButton: 'ゲーム開始',
     guestLogin: 'ゲストで体験',
     guestSubtitle: '登録不要、すぐにプレイ',

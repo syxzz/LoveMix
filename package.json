@@ -9,8 +9,10 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo-google-fonts/cinzel": "^0.4.2",
     "@expo-google-fonts/dancing-script": "^0.4.2",
     "@expo-google-fonts/niconne": "^0.4.1",
+    "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",

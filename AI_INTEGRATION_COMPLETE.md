@@ -4,7 +4,7 @@
 
 ### 1. AI 服务模块 ✅
 - **文件**: `src/services/ai.ts`
-- **API Key**: `cky_KQYbDHquDRJZBD27f09L` (已配置)
+- **API Key**: `cky_5OYHvtqWH89hP57Ugu4i` (已配置)
 - **模型**: MiniMax M2.1 (gpt_type: 8602)
 - **功能**:
   - ✅ 与 DM 对话

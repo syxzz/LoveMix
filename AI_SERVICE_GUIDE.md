@@ -18,7 +18,7 @@
 ## API 配置
 
 API 已经配置好，使用以下参数：
-- **API Key**: `cky_KQYbDHquDRJZBD27f09L`
+- **API Key**: `cky_5OYHvtqWH89hP57Ugu4i`
 - **Base URL**: `https://api-chat.charaboard.com/v1`
 - **模型**: MiniMax M2.1 (gpt_type: 8602)
 - **支持思考链**: ✅

@@ -1,6 +1,5 @@
 /**
- * RegisterScreen - 剧本杀主题注册页面
- * 悬疑风格 + 神秘特效
+ * RegisterScreen - 精致注册页面
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -15,7 +14,6 @@ import {
   Alert,
   ScrollView,
   Animated,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -28,76 +26,7 @@ import { register } from '../services/auth';
 import { userAtom, isAuthenticatedAtom } from '../store';
 import { Feather } from '@expo/vector-icons';
 
-const { width, height } = Dimensions.get('window');
-
-type RegisterScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Register'
->;
-
-// 漂浮符号组件
-const FloatingSymbol: React.FC<{ symbol: string; delay: number }> = ({ symbol, delay }) => {
-  const translateY = useRef(new Animated.Value(height)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-  const rotate = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(opacity, {
-            toValue: 0.4,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(translateY, {
-            toValue: -200,
-            duration: 10000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateY, {
-            toValue: height,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.timing(rotate, {
-          toValue: 1,
-          duration: 10000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
-  const rotation = rotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  return (
-    <Animated.Text
-      style={[
-        styles.floatingSymbol,
-        {
-          left: Math.random() * width,
-          transform: [{ translateY }, { rotate: rotation }],
-          opacity,
-        },
-      ]}
-    >
-      {symbol}
-    </Animated.Text>
-  );
-};
+type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<RegisterScreenNavigationProp>();
@@ -113,23 +42,13 @@ export const RegisterScreen: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 动画值
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(50)).current;
+  const slideUpAnim = useRef(new Animated.Value(40)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideUpAnim, {
-        toValue: 0,
-        tension: 40,
-        friction: 8,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.spring(slideUpAnim, { toValue: 0, tension: 40, friction: 9, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -154,10 +73,7 @@ export const RegisterScreen: React.FC = () => {
       });
       setUser(user);
       setIsAuthenticated(true);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (error: any) {
       Alert.alert(t('register.alert.registerFailed'), error.message || t('register.alert.tryAgain'));
     } finally {
@@ -165,41 +81,22 @@ export const RegisterScreen: React.FC = () => {
     }
   };
 
-  const symbols = ['🔍', '🎭', '🗝️', '📜', '🕯️', '⚖️'];
-
   return (
     <View style={styles.container}>
-      {/* 深色渐变背景 */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.secondary, COLORS.primary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={['#0C0E1A', '#141832', '#1B1F3B']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-
-      {/* 漂浮符号效果 */}
-      {symbols.map((symbol, i) => (
-        <FloatingSymbol key={i} symbol={symbol} delay={i * 1000} />
-      ))}
-
-      {/* 暗纹理覆盖层 */}
-      <View style={styles.textureOverlay} />
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* 返回按钮 */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <View style={styles.backButtonGlass}>
-            <LinearGradient
-              colors={['rgba(139, 71, 137, 0.4)', 'rgba(44, 62, 80, 0.4)']}
-              style={styles.backButtonGradient}
-            />
-            <Feather name="arrow-left" size={24} color={COLORS.textLight} />
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <View style={styles.backButtonContainer}>
+            <Feather name="arrow-left" size={22} color={COLORS.textDark} />
           </View>
         </TouchableOpacity>
 
@@ -210,162 +107,105 @@ export const RegisterScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View
-            style={[
-              styles.content,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideUpAnim }],
-              },
-            ]}
+            style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}
           >
-            {/* 标题区域 */}
             <View style={styles.headerSection}>
               <View style={styles.iconContainer}>
-                <LinearGradient
-                  colors={[COLORS.primary, COLORS.accent]}
-                  style={styles.iconGradient}
-                />
-                <Text style={styles.icon}>🎭</Text>
+                <Feather name="user-plus" size={28} color={COLORS.primary} />
               </View>
               <Text style={styles.welcomeText}>{t('register.createAccount')}</Text>
               <Text style={styles.subtitle}>{t('register.subtitle')}</Text>
             </View>
 
-            {/* 表单卡片 */}
             <View style={styles.formCard}>
-              <LinearGradient
-                colors={['rgba(139, 71, 137, 0.2)', 'rgba(44, 62, 80, 0.2)']}
-                style={styles.glassGradient}
-              />
-
-              {/* 邮箱输入 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t('register.email')}</Text>
                 <View style={styles.inputWrapper}>
-                  <LinearGradient
-                    colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
-                    style={styles.inputGradient}
+                  <Feather name="mail" size={18} color={COLORS.textGray} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('register.emailPlaceholder')}
+                    placeholderTextColor={COLORS.textGray}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
                   />
-                  <View style={styles.inputContainer}>
-                    <Feather name="mail" size={20} color={COLORS.accent} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('register.emailPlaceholder')}
-                      placeholderTextColor={COLORS.textGray}
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
                 </View>
               </View>
 
-              {/* 用户名输入 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t('register.username')}</Text>
                 <View style={styles.inputWrapper}>
-                  <LinearGradient
-                    colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
-                    style={styles.inputGradient}
+                  <Feather name="user" size={18} color={COLORS.textGray} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('register.usernamePlaceholder')}
+                    placeholderTextColor={COLORS.textGray}
+                    value={username}
+                    onChangeText={setUsername}
+                    autoCapitalize="none"
                   />
-                  <View style={styles.inputContainer}>
-                    <Feather name="user" size={20} color={COLORS.accent} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('register.usernamePlaceholder')}
-                      placeholderTextColor={COLORS.textGray}
-                      value={username}
-                      onChangeText={setUsername}
-                      autoCapitalize="none"
-                    />
-                  </View>
                 </View>
               </View>
 
-              {/* 密码输入 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t('register.password')}</Text>
                 <View style={styles.inputWrapper}>
-                  <LinearGradient
-                    colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
-                    style={styles.inputGradient}
+                  <Feather name="lock" size={18} color={COLORS.textGray} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('register.passwordPlaceholder')}
+                    placeholderTextColor={COLORS.textGray}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
                   />
-                  <View style={styles.inputContainer}>
-                    <Feather name="lock" size={20} color={COLORS.accent} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('register.passwordPlaceholder')}
-                      placeholderTextColor={COLORS.textGray}
-                      value={password}
-                      onChangeText={setPassword}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                      <Feather
-                        name={showPassword ? 'eye' : 'eye-off'}
-                        size={20}
-                        color={COLORS.accent}
-                      />
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Feather name={showPassword ? 'eye' : 'eye-off'} size={18} color={COLORS.textGray} />
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* 确认密码输入 */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t('register.confirmPassword')}</Text>
                 <View style={styles.inputWrapper}>
-                  <LinearGradient
-                    colors={['rgba(139, 71, 137, 0.3)', 'rgba(44, 62, 80, 0.3)']}
-                    style={styles.inputGradient}
+                  <Feather name="lock" size={18} color={COLORS.textGray} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('register.confirmPasswordPlaceholder')}
+                    placeholderTextColor={COLORS.textGray}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
                   />
-                  <View style={styles.inputContainer}>
-                    <Feather name="lock" size={20} color={COLORS.accent} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('register.confirmPasswordPlaceholder')}
-                      placeholderTextColor={COLORS.textGray}
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      secureTextEntry={!showConfirmPassword}
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity
-                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      <Feather
-                        name={showConfirmPassword ? 'eye' : 'eye-off'}
-                        size={20}
-                        color={COLORS.accent}
-                      />
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    <Feather name={showConfirmPassword ? 'eye' : 'eye-off'} size={18} color={COLORS.textGray} />
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* 注册按钮 */}
               <TouchableOpacity
                 style={styles.registerButton}
                 onPress={handleRegister}
                 disabled={loading}
+                activeOpacity={0.85}
               >
                 <LinearGradient
-                  colors={[COLORS.primary, COLORS.accent]}
+                  colors={['#6B5CE7', '#8B7AFF']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.registerButtonGradient}
                 >
-                  <Feather name="user-plus" size={20} color={COLORS.textLight} />
                   <Text style={styles.registerButtonText}>
                     {loading ? '注册中...' : t('register.registerButton')}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
 
-              {/* 登录链接 */}
               <View style={styles.loginSection}>
                 <Text style={styles.loginText}>{t('register.hasAccount')}</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -384,14 +224,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  floatingSymbol: {
-    position: 'absolute',
-    fontSize: 30,
-  },
-  textureOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
   keyboardView: {
     flex: 1,
   },
@@ -401,26 +233,23 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 10,
   },
-  backButtonGlass: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1.5,
+  backButtonContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(37,40,66,0.6)',
+    borderWidth: 1,
     borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backButtonGradient: {
-    ...StyleSheet.absoluteFillObject,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'ios' ? 120 : 100,
+    paddingTop: Platform.OS === 'ios' ? 130 : 110,
     paddingBottom: 40,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
   },
   content: {
     flex: 1,
@@ -430,93 +259,85 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(107,92,231,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(107,92,231,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: COLORS.accent,
-    overflow: 'hidden',
-  },
-  iconGradient: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.3,
-  },
-  icon: {
-    fontSize: 40,
+    marginBottom: 24,
   },
   welcomeText: {
-    fontSize: 36,
-    fontWeight: 'bold',
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 28,
     color: COLORS.textLight,
     marginBottom: 8,
-    textShadowColor: COLORS.accent,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 16,
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
     color: COLORS.textGray,
+    letterSpacing: 0.3,
   },
   formCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1.5,
+    borderRadius: RADIUS.large,
+    backgroundColor: COLORS.cardBg,
+    borderWidth: 1,
     borderColor: COLORS.border,
     padding: 24,
   },
-  glassGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    marginBottom: 10,
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 11,
+    color: COLORS.textGray,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
   },
   inputWrapper: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
-  inputGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: 'rgba(37,40,66,0.5)',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 10,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 15,
     color: COLORS.textDark,
   },
   registerButton: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginTop: 8,
+    marginTop: 6,
     marginBottom: 20,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
   registerButtonGradient: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
+    paddingVertical: 15,
   },
   registerButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 15,
     color: COLORS.textLight,
+    letterSpacing: 0.5,
   },
   loginSection: {
     flexDirection: 'row',
@@ -525,13 +346,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   loginText: {
-    fontSize: 15,
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13,
     color: COLORS.textGray,
   },
   loginLink: {
-    fontSize: 15,
-    color: COLORS.accent,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 13,
+    color: COLORS.primary,
   },
 });

@@ -82,18 +82,13 @@ export const RechargeScreen: React.FC = () => {
       />
 
       {/* 顶部导航 */}
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={24} color={COLORS.textLight} />
+          <Feather name="arrow-left" size={24} color="#F5F5F7" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>积分充值</Text>
         <View style={styles.placeholder} />
-      </LinearGradient>
+      </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.tipCard}>
@@ -131,7 +126,7 @@ export const RechargeScreen: React.FC = () => {
                 colors={
                   pkg.popular
                     ? [COLORS.primary, COLORS.accent]
-                    : ['rgba(139,71,137,0.2)', 'rgba(44,62,80,0.1)']
+                    : ['rgba(107,92,231,0.2)', 'rgba(27,31,59,0.1)']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -253,20 +248,26 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: '#252842',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(37,40,66,0.6)',
+    borderWidth: 1,
+    borderColor: '#252842',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.textLight,
+    color: '#F5F5F7',
   },
   placeholder: {
-    width: 40,
+    width: 44,
   },
   scrollView: {
     flex: 1,
@@ -278,12 +279,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(212,175,55,0.1)',
+    backgroundColor: 'rgba(201,169,110,0.1)',
     borderRadius: RADIUS.medium,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
     borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)',
+    borderColor: 'rgba(201,169,110,0.3)',
   },
   tipText: {
     flex: 1,
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
   },
   noteSection: {
-    backgroundColor: 'rgba(139,71,137,0.1)',
+    backgroundColor: 'rgba(107,92,231,0.1)',
     borderRadius: RADIUS.medium,
     padding: SPACING.lg,
     marginTop: SPACING.xl,

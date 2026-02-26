@@ -5,9 +5,10 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Script, Character } from '../types';
-import { generateScriptCoverImage, generateCharacterAvatar, generateIntroductionImage } from './ai';
+import { generateScriptCoverImage, generateScriptCoverImagePortrait, generateCharacterAvatar, generateIntroductionImage } from './ai';
 
 const COVER_CACHE_KEY = 'script_covers';
+const COVER_PORTRAIT_CACHE_KEY = 'script_covers_portrait';
 const AVATAR_CACHE_KEY = 'character_avatars';
 const INTRO_IMAGE_CACHE_KEY = 'introduction_images';
 
@@ -28,6 +29,7 @@ interface IntroImageCache {
 
 // 内存缓存，避免重复读取 AsyncStorage
 let memoryCache: CoverCache | null = null;
+let portraitMemoryCache: CoverCache | null = null;
 let avatarMemoryCache: AvatarCache | null = null;
 let introImageMemoryCache: IntroImageCache | null = null;
 
@@ -110,6 +112,60 @@ export const saveCoverToCache = async (scriptId: string, imageUrl: string): Prom
   }
 };
 
+// ==================== 竖版封面缓存 ====================
+
+const initPortraitMemoryCache = async (): Promise<void> => {
+  if (portraitMemoryCache !== null) return;
+  try {
+    const cacheJson = await AsyncStorage.getItem(COVER_PORTRAIT_CACHE_KEY);
+    portraitMemoryCache = cacheJson ? JSON.parse(cacheJson) : {};
+  } catch (error) {
+    console.error('初始化竖版封面缓存失败:', error);
+    portraitMemoryCache = {};
+  }
+};
+
+export const getCachedCoverPortraitSync = (scriptId: string): string | null => {
+  if (!portraitMemoryCache) return null;
+  return portraitMemoryCache[scriptId] || null;
+};
+
+export const getCachedCoverPortrait = async (scriptId: string): Promise<string | null> => {
+  await initPortraitMemoryCache();
+  return portraitMemoryCache?.[scriptId] || null;
+};
+
+export const saveCoverPortraitToCache = async (scriptId: string, imageUrl: string): Promise<void> => {
+  try {
+    await initPortraitMemoryCache();
+    if (portraitMemoryCache) {
+      portraitMemoryCache[scriptId] = imageUrl;
+    }
+    await AsyncStorage.setItem(COVER_PORTRAIT_CACHE_KEY, JSON.stringify(portraitMemoryCache));
+    console.log(`✅ 竖版封面已缓存: ${scriptId}`);
+  } catch (error) {
+    console.error('保存竖版封面缓存失败:', error);
+  }
+};
+
+export const ensureScriptCoverPortrait = async (script: Script): Promise<string | null> => {
+  if (script.coverImagePortrait) return script.coverImagePortrait;
+
+  const cached = await getCachedCoverPortrait(script.id);
+  if (cached) return cached;
+
+  try {
+    const imageUrl = await generateScriptCoverImagePortrait(script);
+    await saveCoverPortraitToCache(script.id, imageUrl);
+    return imageUrl;
+  } catch (error) {
+    console.error(`❌ 生成竖版封面失败: ${script.title}`, error);
+    return null;
+  }
+};
+
+// ==================== 横版封面 ====================
+
 // 为剧本生成封面图片（如果还没有）
 export const ensureScriptCover = async (script: Script): Promise<string | null> => {
   // 1. 如果剧本数据中已有封面，直接返回
@@ -143,40 +199,46 @@ export const ensureScriptCover = async (script: Script): Promise<string | null> 
 
 // 批量初始化所有剧本的封面（后台静默执行）
 export const initializeAllScriptCovers = async (scripts: Script[]): Promise<void> => {
-  console.log('🚀 开始初始化剧本封面...');
+  console.log('🚀 开始初始化剧本封面（横版 + 竖版）...');
 
   for (const script of scripts) {
-    // 跳过已有封面的剧本
-    if (script.coverImage) {
-      continue;
+    const hasLandscape = !!script.coverImage || !!(await getCachedCover(script.id));
+    const hasPortrait = !!script.coverImagePortrait || !!(await getCachedCoverPortrait(script.id));
+
+    if (hasLandscape && hasPortrait) continue;
+
+    if (!hasLandscape) {
+      ensureScriptCover(script).catch(error => {
+        console.error(`后台生成横版封面失败: ${script.title}`, error);
+      });
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
-    // 检查缓存
-    const cachedCover = await getCachedCover(script.id);
-    if (cachedCover) {
-      continue;
+    if (!hasPortrait) {
+      ensureScriptCoverPortrait(script).catch(error => {
+        console.error(`后台生成竖版封面失败: ${script.title}`, error);
+      });
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
-
-    // 后台生成封面（不阻塞主流程）
-    ensureScriptCover(script).catch(error => {
-      console.error(`后台生成封面失败: ${script.title}`, error);
-    });
-
-    // 避免同时发起太多请求，每个请求间隔 1 秒
-    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
-  console.log('✅ 剧本封面初始化完成');
+  console.log('✅ 剧本封面初始化完成（横版 + 竖版）');
 };
 
-// 清除封面缓存（用于调试）
+// 清除所有图片缓存（封面+头像+开场场景）
 export const clearCoverCache = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(COVER_CACHE_KEY);
+    await AsyncStorage.removeItem(COVER_PORTRAIT_CACHE_KEY);
+    await AsyncStorage.removeItem(AVATAR_CACHE_KEY);
+    await AsyncStorage.removeItem(INTRO_IMAGE_CACHE_KEY);
     memoryCache = {};
-    console.log('🗑️ 封面缓存已清除');
+    portraitMemoryCache = {};
+    avatarMemoryCache = {};
+    introImageMemoryCache = {};
+    console.log('🗑️ 图片缓存已清除（横版封面 + 竖版封面 + 头像 + 开场场景）');
   } catch (error) {
-    console.error('清除封面缓存失败:', error);
+    console.error('清除缓存失败:', error);
   }
 };
 
@@ -210,9 +272,10 @@ export const clearAllScriptCaches = async (): Promise<void> => {
 // 预加载内存缓存（在应用启动时调用）
 export const preloadCoverCache = async (): Promise<void> => {
   await initMemoryCache();
+  await initPortraitMemoryCache();
   await initAvatarMemoryCache();
   await initIntroImageMemoryCache();
-  console.log('🚀 封面、头像和开场场景缓存预加载完成');
+  console.log('🚀 封面、竖版封面、头像和开场场景缓存预加载完成');
 };
 
 // ==================== 角色头像相关函数 ====================

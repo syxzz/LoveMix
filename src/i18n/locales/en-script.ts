@@ -5,8 +5,8 @@
 export default {
   // Welcome Page
   welcome: {
-    appName: 'AI Murder Mystery',
-    tagline: 'AI-Powered Solo Detective Game',
+    appName: 'Mirrage',
+    tagline: 'Fiction reflects truth',
     startButton: 'Start Game',
     guestLogin: 'Quick Guest Access',
     guestSubtitle: 'No registration required',

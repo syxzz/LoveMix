@@ -55,6 +55,7 @@ export interface Script {
   duration: string; // 例如: "60-90分钟"
   characterCount: number;
   coverImage?: string;
+  coverImagePortrait?: string;
   storyBackground: string;
   characters: Character[];
   clues: Clue[];

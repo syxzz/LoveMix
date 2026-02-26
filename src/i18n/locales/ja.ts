@@ -19,8 +19,8 @@ export default {
 
   // ウェルカム
   welcome: {
-    appName: 'LoveMix',
-    tagline: 'AIで、甘い瞬間を記録',
+    appName: 'Mirrage',
+    tagline: '鏡像蜃気楼、脚本は虚構、真実の屈折',
     startButton: '始める',
     guestLogin: 'ゲストで体験',
     guestSubtitle: '登録不要、すぐに使える',
@@ -32,7 +32,7 @@ export default {
   login: {
     title: 'ログイン',
     welcomeBack: 'おかえりなさい',
-    subtitle: 'ログインしてLoveMixを続ける',
+    subtitle: '推理の旅を続けよう',
     logoSubtext: '愛をもっと楽しく',
     email: 'メール',
     emailPlaceholder: 'メールアドレス',
@@ -125,7 +125,7 @@ export default {
     privacy: 'プライバシー',
     privacyDesc: 'プライバシーとセキュリティ設定',
     about: 'について',
-    aboutDesc: 'LoveMixについて',
+    aboutDesc: 'Mirrageについて',
     version: 'バージョン',
     profile: 'プロフィール',
   },

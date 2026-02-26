@@ -7,11 +7,12 @@
 import { Character, Message, Script, ScriptGenre } from '../types';
 import { getAPIKey } from './storage';
 import { fetch as fetchPolyfill } from 'react-native-fetch-api';
+import { Paths, File } from 'expo-file-system';
 
 // API 配置
 const API_BASE_URL = 'https://api-chat.charaboard.com/v1';
 const IMAGE_API_BASE_URL = 'https://api-image.charaboard.com/v2';
-const API_KEY = 'cky_KQYbDHquDRJZBD27f09L';
+const API_KEY = 'cky_5OYHvtqWH89hP57Ugu4i';
 const GPT_TYPE = 8602; // MiniMax M2.1 支持思考链
 
 // 请求头配置
@@ -590,78 +591,180 @@ export const generateEnding = async (
   return result.content;
 };
 
-// 生成剧本封面图片
+// 根据剧本题材生成对应的场景描述
+const getGenreScenePrompt = (script: Script): string => {
+  const genre = script.genre;
+  switch (genre) {
+    case 'ancient_romance':
+      return 'ancient Chinese palace with cherry blossoms, elegant rooftops, lanterns glowing at twilight';
+    case 'modern_urban':
+      return 'modern city skyline at golden hour, rooftop cafe, warm sunset reflecting on glass buildings';
+    case 'horror_thriller':
+      return 'abandoned mansion surrounded by mist, eerie moonlight, old garden with overgrown roses';
+    case 'fantasy_wuxia':
+      return 'mountain temple above clouds, bamboo forest, martial arts warriors on a cliff edge at sunrise';
+    case 'sci_fi':
+      return 'futuristic space station with holographic displays, neon lights, vast galaxy visible through windows';
+    case 'historical_mystery':
+      return 'traditional Japanese detective office in Taisho era, rain outside, dim warm interior lighting';
+    case 'campus_youth':
+      return 'Japanese high school campus in spring, cherry blossom petals falling, warm afternoon sunlight';
+    case 'business_intrigue':
+      return 'luxury corporate penthouse office, city night view, dramatic interior lighting';
+    default:
+      return 'elegant Victorian mansion garden at golden hour, warm sunlight filtering through trees';
+  }
+};
+
+// 生成剧本封面图片（横版 16:9）
 export const generateScriptCoverImage = async (
   script: Script
 ): Promise<string> => {
   try {
-    console.log('🎨 开始生成剧本封面图片...');
+    console.log('🎨 开始生成剧本封面图片（横版）...');
 
-    // 构建图片生成提示词（纯英文，避免乱码）
-    // 不包含任何中文，避免 AI 在图片中生成中文文字导致乱码
-    const prompt = `Create a dark atmospheric manga-style illustration for a murder mystery visual novel.
-Scene: A luxurious Victorian mansion at night during a thunderstorm, dramatic lighting through windows, mysterious shadows
-Style: Japanese manga/anime art style with film noir aesthetic, high contrast lighting, moody atmosphere
-Composition: Wide cinematic establishing shot, emphasis on architectural details and ominous mood
-Color palette: Deep blues, purples, and blacks with dramatic highlights, noir color grading
-Quality: Professional manga illustration, highly detailed
-CRITICAL: Absolutely NO text, NO words, NO letters, NO Chinese characters, NO Japanese characters - pure visual artwork only`;
+    const sceneDesc = getGenreScenePrompt(script);
 
-    const requestBody = {
-      model: 'gemini-2.5-flash-image',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt }
-          ]
-        }
-      ],
-      generationConfig: {
-        responseModalities: ['IMAGE'],
-        imageConfig: { aspectRatio: '16:9' },
-        temperature: 0.8,
-        n: 1
-      }
-    };
+    const prompt = `Create a vibrant Japanese anime-style illustration for a mystery visual novel cover.
+Scene: ${sceneDesc}
+Style: High-quality Japanese anime art, Studio Ghibli / Makoto Shinkai inspired, vivid colors, beautiful lighting, atmospheric depth
+Composition: Wide cinematic landscape establishing shot, rich environmental detail, sense of wonder and intrigue
+Color palette: Warm golden tones, soft pastels, vivid sky gradients, luminous highlights - bright and inviting
+Quality: Professional anime key visual, highly detailed backgrounds, cinematic composition
+CRITICAL: Absolutely NO text, NO words, NO letters, NO characters of any language - pure visual artwork only`;
 
-    console.log('📤 发送图片生成请求:', {
-      url: `${IMAGE_API_BASE_URL}/nanobanana/txt2Image`,
-      scriptTitle: script.title,
-    });
-
-    const response = await fetch(`${IMAGE_API_BASE_URL}/nanobanana/txt2Image`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(requestBody),
-    });
-
-    console.log('📡 图片生成响应状态:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ 图片生成错误:', errorText);
-      throw new Error(`图片生成失败: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log('✅ 图片生成成功');
-
-    // 提取图片 URL
-    const imageUrl = result.candidates?.[0]?.content?.parts?.find(
-      (part: any) => part.inlineData
-    )?.inlineData?.data;
-
-    if (!imageUrl) {
-      throw new Error('未能从响应中提取图片 URL');
-    }
-
-    console.log('🖼️ 图片 URL:', imageUrl);
+    const imageUrl = await callImageGenAPI(prompt, '16:9');
+    console.log('🖼️ 横版封面生成成功');
     return imageUrl;
   } catch (error: any) {
-    console.error('❌ 生成剧本封面图片失败:', error);
+    console.error('❌ 生成横版封面失败:', error);
     throw error;
   }
+};
+
+// 生成剧本封面图片（竖版 9:16）
+export const generateScriptCoverImagePortrait = async (
+  script: Script
+): Promise<string> => {
+  try {
+    console.log('🎨 开始生成剧本封面图片（竖版）...');
+
+    const sceneDesc = getGenreScenePrompt(script);
+
+    const prompt = `Create a vibrant Japanese anime-style illustration for a mystery visual novel poster.
+Scene: ${sceneDesc}, with a mysterious silhouette of a character in the foreground
+Style: High-quality Japanese anime art, light novel cover illustration style, vivid colors, dramatic vertical composition
+Composition: Vertical poster layout, character silhouette framed by environment, depth and atmosphere
+Color palette: Rich warm tones, luminous sky, soft color gradients - beautiful and captivating
+Quality: Professional anime illustration, light novel cover quality, highly detailed
+CRITICAL: Absolutely NO text, NO words, NO letters, NO characters of any language - pure visual artwork only`;
+
+    const imageUrl = await callImageGenAPI(prompt, '9:16');
+    console.log('🖼️ 竖版封面生成成功');
+    return imageUrl;
+  } catch (error: any) {
+    console.error('❌ 生成竖版封面失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 将 base64 数据保存为本地文件并返回文件 URI
+ * 这样可以避免 React Native Image 组件处理超长 base64 字符串的问题
+ */
+const saveBase64ToFile = async (base64Data: string, mimeType: string, filename: string): Promise<string> => {
+  try {
+    // 确定文件扩展名
+    const extension = mimeType.includes('png') ? 'png' : 'jpg';
+
+    // 使用新的 expo-file-system API
+    const file = new File(Paths.cache, `${filename}.${extension}`);
+
+    // 将 base64 数据转换为 Uint8Array
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // 写入文件
+    await file.write(bytes);
+
+    console.log('💾 图片已保存到本地:', file.uri);
+    return file.uri;
+  } catch (error) {
+    console.error('❌ 保存图片到本地失败:', error);
+    // 如果保存失败，返回 data URL 作为降级方案
+    return `data:${mimeType};base64,${base64Data}`;
+  }
+};
+
+// 通用图片生成 API 调用
+const callImageGenAPI = async (prompt: string, aspectRatio: string): Promise<string> => {
+  const requestBody = {
+    model: 'gemini-2.5-flash-image',
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: prompt }]
+      }
+    ],
+    generationConfig: {
+      responseModalities: ['IMAGE'],
+      imageConfig: { aspectRatio },
+      temperature: 0.8,
+      n: 1
+    }
+  };
+
+  const response = await fetch(`${IMAGE_API_BASE_URL}/nanobanana/txt2Image`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ 图片生成错误:', errorText);
+    throw new Error(`图片生成失败: ${response.status}`);
+  }
+
+  const result = await response.json();
+
+  const inlineData = result.candidates?.[0]?.content?.parts?.find(
+    (part: any) => part.inlineData
+  )?.inlineData;
+
+  if (!inlineData?.data) {
+    console.error('❌ API响应结构:', JSON.stringify(result, null, 2).substring(0, 500));
+    throw new Error('未能从响应中提取图片数据');
+  }
+
+  const imageData = inlineData.data;
+
+  // 检查返回的是 URL 还是 base64 数据
+  if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+    // 如果是 URL，直接返回
+    console.log('🌐 API 返回的是 CDN URL:', imageData);
+    return imageData;
+  }
+
+  // 如果是 base64 数据，保存为本地文件
+  const mimeType = inlineData.mimeType || 'image/png';
+  console.log('📊 图片数据信息:', {
+    mimeType,
+    dataLength: imageData.length,
+    dataPrefix: imageData.substring(0, 50),
+  });
+
+  // 生成唯一的文件名
+  const filename = `image_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  // 将 base64 数据保存为本地文件
+  const fileUri = await saveBase64ToFile(imageData, mimeType, filename);
+  console.log('🖼️ 图片已保存，URI:', fileUri.substring(0, 100));
+
+  return fileUri;
 };
 
 // 生成角色头像
@@ -700,65 +803,17 @@ export const generateCharacterAvatar = async (
     const occupation = occupationMap[character.occupation] || character.occupation;
     const personality = personalityMap[character.personality] || 'mysterious';
 
-    const prompt = `Create a manga-style character portrait for a murder mystery visual novel.
+    const prompt = `Create a beautiful anime-style character portrait for a mystery visual novel.
 Character: ${gender}, age ${character.age}, ${occupation}
 Personality: ${personality}
-Style: Japanese anime/manga art style, detailed facial features, expressive eyes
-Composition: Portrait shot, shoulders and head visible, neutral background
-Mood: Mysterious and intriguing, fitting for a murder mystery character
-Art quality: High detail, professional anime character design
-CRITICAL: Absolutely NO text, NO words, NO letters, NO Chinese characters, NO Japanese characters - pure character portrait only`;
+Style: High-quality Japanese anime art, vivid colors, detailed expressive eyes, beautiful character design
+Composition: Portrait shot from chest up, soft gradient background with warm tones
+Mood: Charismatic and intriguing, vibrant and appealing anime character
+Art quality: Professional anime character illustration, light novel quality
+CRITICAL: Absolutely NO text, NO words, NO letters - pure character portrait only`;
 
-    const requestBody = {
-      model: 'gemini-2.5-flash-image',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt }
-          ]
-        }
-      ],
-      generationConfig: {
-        responseModalities: ['IMAGE'],
-        imageConfig: { aspectRatio: '1:1' }, // 头像使用 1:1 比例
-        temperature: 0.8,
-        n: 1
-      }
-    };
-
-    console.log('📤 发送角色头像生成请求:', {
-      url: `${IMAGE_API_BASE_URL}/nanobanana/txt2Image`,
-      characterName: character.name,
-    });
-
-    const response = await fetch(`${IMAGE_API_BASE_URL}/nanobanana/txt2Image`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(requestBody),
-    });
-
-    console.log('📡 头像生成响应状态:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ 头像生成错误:', errorText);
-      throw new Error(`头像生成失败: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log('✅ 头像生成成功');
-
-    // 提取图片 URL
-    const imageUrl = result.candidates?.[0]?.content?.parts?.find(
-      (part: any) => part.inlineData
-    )?.inlineData?.data;
-
-    if (!imageUrl) {
-      throw new Error('未能从响应中提取头像 URL');
-    }
-
-    console.log('🖼️ 头像 URL:', imageUrl);
+    const imageUrl = await callImageGenAPI(prompt, '1:1');
+    console.log(`🖼️ 角色头像生成成功: ${character.name}`);
     return imageUrl;
   } catch (error: any) {
     console.error(`❌ 生成角色头像失败: ${character.name}`, error);
@@ -793,68 +848,21 @@ export const generateIntroductionImage = async (
     const gender = genderMap[character.gender] || 'person';
     const occupation = occupationMap[character.occupation] || character.occupation;
 
-    const prompt = `Create a dramatic manga-style opening scene illustration for a murder mystery visual novel.
-Setting: Victorian mansion interior during a stormy night, luxurious but ominous atmosphere
-Main character: ${gender} ${occupation}, age ${character.age}, standing in the scene
-Perspective: First-person view showing the character from behind or side, looking into the mysterious mansion
-Mood: Dark, atmospheric, suspenseful, with dramatic lighting from lightning and candles
-Style: Japanese manga/anime art style with film noir aesthetic, cinematic composition
-Details: Rich interior details, shadows, rain visible through windows, mysterious ambiance
-Color palette: Deep blues, purples, blacks with dramatic highlights
-Quality: Professional manga illustration, highly detailed
-CRITICAL: Absolutely NO text, NO words, NO letters, NO Chinese characters, NO Japanese characters - pure visual scene only`;
+    const sceneDesc = getGenreScenePrompt(script);
 
-    const requestBody = {
-      model: 'gemini-2.5-flash-image',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt }
-          ]
-        }
-      ],
-      generationConfig: {
-        responseModalities: ['IMAGE'],
-        imageConfig: { aspectRatio: '16:9' }, // 开场场景使用 16:9 比例
-        temperature: 0.8,
-        n: 1
-      }
-    };
+    const prompt = `Create a beautiful anime-style opening scene illustration for a mystery visual novel.
+Setting: ${sceneDesc}
+Main character: ${gender} ${occupation}, age ${character.age}, standing in the scene looking ahead
+Perspective: Cinematic third-person view, character in foreground gazing into the scene
+Mood: Atmospheric, intriguing, beautiful with warm lighting and dramatic sky
+Style: High-quality Japanese anime art, Makoto Shinkai inspired lighting, vivid colors
+Details: Rich environmental details, beautiful sky, warm ambient lighting
+Color palette: Warm golden tones, soft pastels, vivid gradients
+Quality: Professional anime key visual, highly detailed
+CRITICAL: Absolutely NO text, NO words, NO letters - pure visual scene only`;
 
-    console.log('📤 发送开场场景生成请求:', {
-      url: `${IMAGE_API_BASE_URL}/nanobanana/txt2Image`,
-      scriptTitle: script.title,
-      characterName: character.name,
-    });
-
-    const response = await fetch(`${IMAGE_API_BASE_URL}/nanobanana/txt2Image`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(requestBody),
-    });
-
-    console.log('📡 开场场景生成响应状态:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ 开场场景生成错误:', errorText);
-      throw new Error(`开场场景生成失败: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log('✅ 开场场景生成成功');
-
-    // 提取图片 URL
-    const imageUrl = result.candidates?.[0]?.content?.parts?.find(
-      (part: any) => part.inlineData
-    )?.inlineData?.data;
-
-    if (!imageUrl) {
-      throw new Error('未能从响应中提取开场场景 URL');
-    }
-
-    console.log('🖼️ 开场场景 URL:', imageUrl);
+    const imageUrl = await callImageGenAPI(prompt, '16:9');
+    console.log(`🖼️ 开场场景生成成功: ${script.title}`);
     return imageUrl;
   } catch (error: any) {
     console.error(`❌ 生成开场场景失败: ${script.title} - ${character.name}`, error);
@@ -1156,6 +1164,19 @@ export const generateScript = async (
       isCustom: true,
       createdAt: Date.now(),
     };
+
+    // 生成封面图片（横版 + 竖版并行生成）
+    onProgress?.('生成剧本封面...', 0.92);
+    try {
+      const [landscapeCover, portraitCover] = await Promise.all([
+        generateScriptCoverImage(script).catch(() => null),
+        generateScriptCoverImagePortrait(script).catch(() => null),
+      ]);
+      if (landscapeCover) script.coverImage = landscapeCover;
+      if (portraitCover) script.coverImagePortrait = portraitCover;
+    } catch (e) {
+      console.error('封面生成失败，不影响剧本创建:', e);
+    }
 
     onProgress?.('剧本生成完成！', 1.0);
 

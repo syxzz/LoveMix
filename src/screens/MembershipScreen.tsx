@@ -283,18 +283,13 @@ export const MembershipScreen: React.FC = () => {
       />
 
       {/* 顶部导航 */}
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={24} color={COLORS.textLight} />
+          <Feather name="arrow-left" size={22} color={COLORS.textDark} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>会员中心</Text>
         <View style={styles.placeholder} />
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -456,22 +451,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 16,
     paddingHorizontal: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(37,40,66,0.6)',
+    borderWidth: 1,
+    borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: COLORS.textLight,
   },
   placeholder: {
-    width: 40,
+    width: 44,
   },
   loadingContainer: {
     flex: 1,
@@ -545,6 +546,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.large,
     padding: SPACING.xl,
     marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(107,92,231,0.2)',
   },
   memberCardHeader: {
     flexDirection: 'row',
@@ -622,9 +625,11 @@ const styles = StyleSheet.create({
     color: COLORS.accent,
   },
   benefitsContainer: {
-    backgroundColor: 'rgba(139,71,137,0.1)',
+    backgroundColor: 'rgba(107,92,231,0.08)',
     borderRadius: RADIUS.medium,
     padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   benefitItem: {
     flexDirection: 'row',
@@ -673,9 +678,11 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   transactionsContainer: {
-    backgroundColor: 'rgba(139,71,137,0.1)',
+    backgroundColor: COLORS.cardBg,
     borderRadius: RADIUS.medium,
     padding: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   transactionItem: {
     flexDirection: 'row',

@@ -334,8 +334,8 @@ export const DialogScreen: React.FC = () => {
           <LinearGradient
             colors={
               isUser
-                ? ['rgba(139,71,137,0.3)', 'rgba(212,175,55,0.2)']
-                : ['rgba(44,62,80,0.4)', 'rgba(139,71,137,0.2)']
+                ? ['rgba(107,92,231,0.3)', 'rgba(201,169,110,0.2)']
+                : ['rgba(27,31,59,0.4)', 'rgba(107,92,231,0.2)']
             }
             style={styles.bubbleGradient}
           />
@@ -383,7 +383,7 @@ export const DialogScreen: React.FC = () => {
         {hasReasoning && isReasoningVisible && (
           <View style={styles.reasoningContainer}>
             <LinearGradient
-              colors={['rgba(212,175,55,0.15)', 'rgba(139,71,137,0.1)']}
+              colors={['rgba(201,169,110,0.15)', 'rgba(107,92,231,0.1)']}
               style={styles.reasoningGradient}
             />
             <View style={styles.reasoningHeader}>
@@ -476,7 +476,7 @@ export const DialogScreen: React.FC = () => {
             <View style={[styles.messageWrapper, styles.aiMessageWrapper]}>
               <View style={[styles.messageBubble, styles.aiBubble, styles.streamingBubble]}>
                 <LinearGradient
-                  colors={['rgba(44,62,80,0.4)', 'rgba(139,71,137,0.2)']}
+                  colors={['rgba(27,31,59,0.4)', 'rgba(107,92,231,0.2)']}
                   style={styles.bubbleGradient}
                 />
 
@@ -536,7 +536,7 @@ export const DialogScreen: React.FC = () => {
         {/* 输入框 */}
         <View style={styles.inputContainer}>
           <LinearGradient
-            colors={['rgba(139,71,137,0.2)', 'rgba(44,62,80,0.15)']}
+            colors={['rgba(107,92,231,0.2)', 'rgba(27,31,59,0.15)']}
             style={styles.inputGradient}
           />
           <TextInput
@@ -557,7 +557,7 @@ export const DialogScreen: React.FC = () => {
             <LinearGradient
               colors={
                 !inputText.trim() || sending
-                  ? ['rgba(139,71,137,0.3)', 'rgba(212,175,55,0.2)']
+                  ? ['rgba(107,92,231,0.3)', 'rgba(201,169,110,0.2)']
                   : [COLORS.primary, COLORS.accent]
               }
               style={styles.sendButtonGradient}
@@ -606,9 +606,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
-    backgroundColor: 'rgba(212,175,55,0.15)',
+    backgroundColor: 'rgba(201,169,110,0.15)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(212,175,55,0.3)',
+    borderBottomColor: 'rgba(201,169,110,0.3)',
   },
   reasoningBannerText: {
     fontSize: 12,
@@ -646,10 +646,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   userBubble: {
-    borderColor: 'rgba(139,71,137,0.5)',
+    borderColor: 'rgba(107,92,231,0.5)',
   },
   aiBubble: {
-    borderColor: 'rgba(44,62,80,0.5)',
+    borderColor: 'rgba(27,31,59,0.5)',
   },
   bubbleGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(212,175,55,0.2)',
+    borderTopColor: 'rgba(201,169,110,0.2)',
   },
   reasoningButtonText: {
     fontSize: 12,
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.medium,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)',
+    borderColor: 'rgba(201,169,110,0.3)',
     overflow: 'hidden',
   },
   reasoningGradient: {
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: 'rgba(22,33,62,0.6)',
+    backgroundColor: 'rgba(22,26,45,0.6)',
     borderRadius: RADIUS.medium,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(212,175,55,0.2)',
+    borderTopColor: 'rgba(201,169,110,0.2)',
   },
   streamingReasoningTitle: {
     fontSize: 11,

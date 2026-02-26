@@ -56,10 +56,10 @@ const MessageBubble = React.memo<{ message: GroupMessage }>(({ message }) => {
         <LinearGradient
           colors={
             isPlayer
-              ? ['rgba(139,71,137,0.3)', 'rgba(212,175,55,0.2)']
+              ? ['rgba(107,92,231,0.3)', 'rgba(201,169,110,0.2)']
               : isDM
-              ? ['rgba(44,62,80,0.5)', 'rgba(44,62,80,0.3)']
-              : ['rgba(44,62,80,0.4)', 'rgba(139,71,137,0.2)']
+              ? ['rgba(27,31,59,0.5)', 'rgba(27,31,59,0.3)']
+              : ['rgba(27,31,59,0.4)', 'rgba(107,92,231,0.2)']
           }
           style={styles.bubbleGradient}
         />
@@ -672,7 +672,7 @@ export const GroupDiscussScreen: React.FC = () => {
         {/* 输入框 */}
         <View style={styles.inputContainer}>
           <LinearGradient
-            colors={['rgba(139,71,137,0.2)', 'rgba(44,62,80,0.15)']}
+            colors={['rgba(107,92,231,0.2)', 'rgba(27,31,59,0.15)']}
             style={styles.inputGradient}
           />
 
@@ -714,7 +714,7 @@ export const GroupDiscussScreen: React.FC = () => {
             <LinearGradient
               colors={
                 !inputText.trim() || discussionStopped
-                  ? ['rgba(139,71,137,0.3)', 'rgba(212,175,55,0.2)']
+                  ? ['rgba(107,92,231,0.3)', 'rgba(201,169,110,0.2)']
                   : [COLORS.primary, COLORS.accent]
               }
               style={styles.sendButtonGradient}
@@ -766,9 +766,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
-    backgroundColor: 'rgba(212,175,55,0.15)',
+    backgroundColor: 'rgba(201,169,110,0.15)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(212,175,55,0.3)',
+    borderBottomColor: 'rgba(201,169,110,0.3)',
   },
   speakerText: {
     fontSize: 12,
@@ -830,13 +830,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   playerBubble: {
-    borderColor: 'rgba(139,71,137,0.5)',
+    borderColor: 'rgba(107,92,231,0.5)',
   },
   aiBubble: {
-    borderColor: 'rgba(44,62,80,0.5)',
+    borderColor: 'rgba(27,31,59,0.5)',
   },
   dmBubble: {
-    borderColor: 'rgba(212,175,55,0.5)',
+    borderColor: 'rgba(201,169,110,0.5)',
     maxWidth: '95%',
   },
   bubbleGradient: {
@@ -913,7 +913,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
-    backgroundColor: 'rgba(44,62,80,0.3)',
+    backgroundColor: 'rgba(27,31,59,0.3)',
     borderRadius: RADIUS.small,
     borderWidth: 1,
     borderColor: COLORS.textGray,
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: 'rgba(22,33,62,0.6)',
+    backgroundColor: 'rgba(22,26,45,0.6)',
     borderRadius: RADIUS.medium,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,

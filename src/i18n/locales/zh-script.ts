@@ -5,8 +5,8 @@
 export default {
   // 欢迎页
   welcome: {
-    appName: 'AI剧本杀',
-    tagline: 'AI驱动的单机推理游戏',
+    appName: 'Mirrage',
+    tagline: '镜像蜃景，剧本是假，折射的真',
     startButton: '开始游戏',
     guestLogin: '游客快速体验',
     guestSubtitle: '无需注册，立即游玩',

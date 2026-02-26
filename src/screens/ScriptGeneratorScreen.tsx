@@ -22,6 +22,7 @@ import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { generateScript } from '../services/ai';
 import { usePointsConsumer } from '../hooks/usePointsConsumer';
 import { saveCustomScript } from '../services/storage';
+import { saveCoverToCache, saveCoverPortraitToCache } from '../services/scriptInit';
 import { generateVideoInBackground } from '../services/videoGeneration';
 import { Feather } from '@expo/vector-icons';
 
@@ -119,6 +120,9 @@ export const ScriptGeneratorScreen: React.FC = () => {
 
       // 生成成功后扣除积分
       await pc.consume();
+      // 保存封面到缓存
+      if (script.coverImage) await saveCoverToCache(script.id, script.coverImage);
+      if (script.coverImagePortrait) await saveCoverPortraitToCache(script.id, script.coverImagePortrait);
 
       // 后台预生成场景还原视频
       generateVideoInBackground(script);
@@ -170,7 +174,7 @@ export const ScriptGeneratorScreen: React.FC = () => {
         >
           <Feather name="arrow-left" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI 剧本生成</Text>
+        <Text style={styles.headerTitle}>智能创作</Text>
         <View style={styles.placeholder} />
       </LinearGradient>
 
@@ -182,9 +186,9 @@ export const ScriptGeneratorScreen: React.FC = () => {
         {/* 说明文字 */}
         <View style={styles.infoCard}>
           <Text style={styles.infoIcon}>✨</Text>
-          <Text style={styles.infoTitle}>AI 智能创作</Text>
+          <Text style={styles.infoTitle}>智能创作</Text>
           <Text style={styles.infoText}>
-            选择你喜欢的剧本类型，AI 将为你生成一个完整的剧本杀剧本，包含角色、线索、真相等所有内容。
+            选择你喜欢的剧本类型，系统将为你生成一个完整的剧本杀剧本，包含角色、线索、真相等所有内容。
           </Text>
         </View>
 
