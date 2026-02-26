@@ -26,7 +26,7 @@ import { getScriptById } from '../data/scripts';
 import { getGameProgress, saveGameProgress } from '../services/storage';
 import { generateIntroduction } from '../services/ai';
 import { ensureIntroductionImage, getCachedIntroImageSync } from '../services/scriptInit';
-// import { startVideoGeneration, cleanupVideoTask } from '../services/videoGeneration';
+import { startVideoGeneration, cleanupVideoTask } from '../services/videoGeneration';
 import { videoTaskAtom } from '../store';
 import { Feather } from '@expo/vector-icons';
 
@@ -60,6 +60,9 @@ export const GameScreen: React.FC = () => {
 
   useEffect(() => {
     loadGame();
+    return () => {
+      cleanupVideoTask();
+    };
   }, []);
 
   // 加载动画效果
@@ -141,10 +144,10 @@ export const GameScreen: React.FC = () => {
       setCharacter(characterData);
       setLoading(false);
 
-      // // 异步启动视频生成（不阻塞游戏流程）
-      // startVideoGeneration(scriptData, (state) => {
-      //   setVideoTask(state);
-      // });
+      // 异步启动视频生成（不阻塞游戏流程）
+      startVideoGeneration(scriptData, (state) => {
+        setVideoTask(state);
+      });
 
       // 加载开场场景图片
       loadIntroImage(scriptData, characterData);
