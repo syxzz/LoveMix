@@ -25,9 +25,9 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { RootStackParamList, Membership, Transaction } from '../types';
-import { membershipCacheAtom } from '../store';
+import { membershipCacheAtom, userAtom } from '../store';
 import {
   getCachedMembership,
   setCachedMembership,
@@ -45,8 +45,6 @@ import {
   getMembershipDaysLeft,
   upgradeMembership,
 } from '../services/firebase-membership';
-import { getCurrentUserId } from '../services/firebaseAuthService';
-import { USE_FIREBASE } from '../config';
 import type { MembershipTier } from '../types/membership';
 
 // 会员等级顺序，用于判断升级/降级
@@ -62,6 +60,7 @@ type MembershipScreenNavigationProp = NativeStackNavigationProp<RootStackParamLi
 export const MembershipScreen: React.FC = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();
   const setMembershipCache = useSetAtom(membershipCacheAtom);
+  const user = useAtomValue(userAtom);
 
   const [membership, setMembership] = useState<Membership | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -79,7 +78,11 @@ export const MembershipScreen: React.FC = () => {
   // 先展示本地缓存，再请求并用结果替换
   useFocusEffect(
     React.useCallback(() => {
-      const userId = getUserId();
+      const userId = user?.id;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
       (async () => {
         const cached = await getCachedMembership(userId);
         const cachedTx = await getCachedTransactions(userId);
@@ -91,7 +94,7 @@ export const MembershipScreen: React.FC = () => {
         }
         await loadData();
       })();
-    }, [])
+    }, [user?.id])
   );
 
   useEffect(() => {
@@ -151,7 +154,12 @@ export const MembershipScreen: React.FC = () => {
   }));
 
   const loadData = async () => {
-    const userId = getUserId();
+    const userId = user?.id;
+    if (!userId) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     try {
       const membershipData = await getMembership(userId);
       const transactionsData = await getTransactions(userId);
@@ -180,15 +188,6 @@ export const MembershipScreen: React.FC = () => {
     navigation.navigate('Recharge');
   };
 
-  const getUserId = (): string => {
-    if (!USE_FIREBASE) return 'test_user_001';
-    try {
-      return getCurrentUserId();
-    } catch {
-      return 'test_user_001';
-    }
-  };
-
   const handleUpgradeTier = (tier: MembershipTier) => {
     if (!membership) return;
     const currentOrder = TIER_ORDER[membership.tier];
@@ -213,7 +212,8 @@ export const MembershipScreen: React.FC = () => {
         onPress: async () => {
           try {
             setUpgradeLoading(true);
-            const userId = getUserId();
+            const userId = user?.id;
+            if (!userId) throw new Error('用户未登录');
             await upgradeMembership(userId, tier, 30);
             await loadData();
             Alert.alert('升级成功', `您已成功升级为${tierConfig.name}，有效期 30 天`);

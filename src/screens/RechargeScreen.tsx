@@ -14,19 +14,19 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAtomValue } from 'jotai';
 import { RootStackParamList } from '../types';
+import { userAtom } from '../store';
 import { COLORS, SPACING, RADIUS } from '../utils/constants';
 import { Feather } from '@expo/vector-icons';
-// 在 RechargeScreen.tsx 第 20 行
 import { RECHARGE_PACKAGES, rechargePoints } from '../services/firebase-membership';
-import { getCurrentUserId } from '../services/firebaseAuthService';
-import { USE_FIREBASE } from '../config';
 
 
 type RechargeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Recharge'>;
 
 export const RechargeScreen: React.FC = () => {
   const navigation = useNavigation<RechargeScreenNavigationProp>();
+  const user = useAtomValue(userAtom);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -56,13 +56,10 @@ export const RechargeScreen: React.FC = () => {
     const pkg = RECHARGE_PACKAGES.find(p => p.id === packageId);
     if (!pkg) return;
 
-    let userId = 'test_user_001';
-    if (USE_FIREBASE) {
-      try {
-        userId = getCurrentUserId();
-      } catch {
-        // 未登录时保持测试用户
-      }
+    const userId = user?.id;
+    if (!userId) {
+      Alert.alert('提示', '请先登录后再充值');
+      return;
     }
 
     const totalPoints = pkg.points + pkg.bonus;
