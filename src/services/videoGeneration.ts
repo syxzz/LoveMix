@@ -97,7 +97,7 @@ function updateState(partial: Partial<VideoTaskState>) {
 }
 
 function buildVideoPrompt(script: Script): string {
-  const truth = script.truth.trim().slice(0, 1200);
+  const truth = (script.truth || script.storyBackground || '').trim().slice(0, 1200);
   const murdererChar = script.characters.find(c => c.id === script.murderer);
   const murdererName = murdererChar?.name || '未知';
   const murdererOccupation = murdererChar?.occupation || '';
