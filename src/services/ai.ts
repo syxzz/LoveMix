@@ -130,7 +130,7 @@ export const sendMessageToAI = async (
     onStream,
   } = options;
 
-  // 首次尝试：带思考链
+  // 首次尝试
   try {
     return await sendMessageToAIInternal(
       messages,
@@ -138,11 +138,9 @@ export const sendMessageToAI = async (
       { enableReasoning, temperature, maxTokens, onStream }
     );
   } catch (error: any) {
-    console.warn('⚠️ 带思考链的请求失败，尝试降级到普通模式:', error.message);
-
-    // 如果启用了思考链且失败，尝试不带思考链重试
+    // 如果启用了思考链，降级到普通模式重试
     if (enableReasoning) {
-      console.log('🔄 重试：禁用思考链');
+      console.warn('⚠️ 带思考链的请求失败，降级到普通模式:', error.message);
       return await sendMessageToAIInternal(
         messages,
         systemPrompt,
@@ -150,8 +148,14 @@ export const sendMessageToAI = async (
       );
     }
 
-    // 如果已经是普通模式还失败，直接抛出错误
-    throw error;
+    // 普通模式失败，等待后重试一次（可能是服务端临时问题）
+    console.warn('⚠️ AI 请求失败，2s 后重试:', error.message);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return await sendMessageToAIInternal(
+      messages,
+      systemPrompt,
+      { enableReasoning: false, temperature, maxTokens, onStream }
+    );
   }
 };
 
