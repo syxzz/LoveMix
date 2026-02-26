@@ -3,9 +3,8 @@
  * 使用 Firebase JS SDK 进行用户认证（兼容 Expo）
  */
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getApp } from 'firebase/app';
 import {
-  getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInAnonymously,
@@ -16,20 +15,11 @@ import {
   User as FirebaseUser,
 } from 'firebase/auth';
 import { User, LoginForm, RegisterForm } from '../types';
-import { logger, FIREBASE_CONFIG } from '../config';
-
-// 初始化 Firebase
-let firebaseApp;
-if (getApps().length === 0) {
-  firebaseApp = initializeApp(FIREBASE_CONFIG);
-} else {
-  firebaseApp = getApp();
-}
-
-const auth = getAuth(firebaseApp);
+import { logger } from '../config';
+import { auth } from '../config/firebase';
 
 // 导出 firebaseApp 供其他服务使用
-export { firebaseApp };
+export const firebaseApp = getApp();
 
 /**
  * 将 Firebase 用户转换为应用用户格式

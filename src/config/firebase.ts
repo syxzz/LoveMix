@@ -8,7 +8,8 @@
 
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, enableNetwork } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // 从环境变量读取 Firebase 配置
 const firebaseConfig = {
@@ -35,6 +36,10 @@ export const db = initializeFirestore(app, {
 
 // 确保使用网络（避免被判定为离线）
 enableNetwork(db).catch(() => {});
-export const auth = getAuth(app);
+
+// 使用 AsyncStorage 持久化认证状态，避免每次重启都需要重新登录
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+});
 
 export default app;
