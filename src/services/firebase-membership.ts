@@ -340,10 +340,21 @@ const addTransaction = async (
   transaction: Omit<Transaction, 'id'>
 ): Promise<string> => {
   try {
-    const docRef = await addDoc(collection(db, TRANSACTIONS_COLLECTION), {
-      ...transaction,
+    const transactionData: any = {
+      userId: transaction.userId,
+      type: transaction.type,
+      amount: transaction.amount,
+      balance: transaction.balance,
+      description: transaction.description,
       timestamp: Timestamp.fromMillis(transaction.timestamp),
-    });
+    };
+
+    // 只在 relatedId 有值时才添加该字段
+    if (transaction.relatedId) {
+      transactionData.relatedId = transaction.relatedId;
+    }
+
+    const docRef = await addDoc(collection(db, TRANSACTIONS_COLLECTION), transactionData);
     return docRef.id;
   } catch (error) {
     console.error('添加交易记录失败:', error);

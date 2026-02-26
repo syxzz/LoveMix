@@ -3,7 +3,7 @@
  * 显示可用剧本列表
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
@@ -36,9 +36,12 @@ export const HomeScreen: React.FC = () => {
   const [progressMap, setProgressMap] = useState<Record<string, any>>({});
   const [completedMap, setCompletedMap] = useState<Record<string, any>>({});
 
-  useEffect(() => {
-    loadScripts();
-  }, []);
+  // 每次页面获得焦点时重新加载，确保 AI 新生成的剧本立即出现在列表中
+  useFocusEffect(
+    useCallback(() => {
+      loadScripts();
+    }, [])
+  );
 
   const loadScripts = async () => {
     const allScripts = await getAllScripts();
