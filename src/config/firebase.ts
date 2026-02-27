@@ -7,7 +7,7 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, enableNetwork } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -32,14 +32,19 @@ const app = initializeApp(firebaseConfig);
 // 使用 initializeFirestore + 长轮询，在 Expo/RN 下更稳定（避免 client is offline）
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
+  // 增加缓存大小，避免频繁网络请求
+  cacheSizeBytes: 40000000, // 40MB
 });
-
-// 确保使用网络（避免被判定为离线）
-enableNetwork(db).catch(() => {});
 
 // 使用 AsyncStorage 持久化认证状态，避免每次重启都需要重新登录
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(ReactNativeAsyncStorage),
 });
+
+// 延迟初始化连接管理（在 App.tsx 中调用）
+export const initConnection = async () => {
+  const { initFirebaseConnection } = await import('../services/firebaseConnection');
+  await initFirebaseConnection();
+};
 
 export default app;

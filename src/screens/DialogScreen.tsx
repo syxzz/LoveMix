@@ -29,6 +29,7 @@ import { talkToDM, talkToCharacter } from '../services/ai';
 import { getScriptById } from '../data/scripts';
 import { getGameProgress, saveGameProgress } from '../services/storage';
 import { usePointsConsumer } from '../hooks/usePointsConsumer';
+import { generateMessageId, generateIntelId } from '../utils/idGenerator';
 
 type DialogScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dialog'>;
 type DialogScreenRouteProp = RouteProp<RootStackParamList, 'Dialog'>;
@@ -215,6 +216,7 @@ export const DialogScreen: React.FC = () => {
     const newIntels: Intel[] = [];
     const lines = content.split('\n');
     let inClueSection = false;
+    const baseTimestamp = Date.now();
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -245,21 +247,21 @@ export const DialogScreen: React.FC = () => {
           const target = characterMatch[1].trim();
           const content = clueText.replace(/（人物[：:].*?）/, '').trim();
           newIntels.push({
-            id: `intel_${Date.now()}_${newIntels.length}`,
+            id: generateIntelId('character'),
             content,
             type: 'character',
             target,
-            timestamp: Date.now(),
+            timestamp: baseTimestamp + newIntels.length,
           });
         } else if (itemMatch) {
           const target = itemMatch[1].trim();
           const content = clueText.replace(/（物品[：:].*?）/, '').trim();
           newIntels.push({
-            id: `intel_${Date.now()}_${newIntels.length}`,
+            id: generateIntelId('item'),
             content,
             type: 'item',
             target,
-            timestamp: Date.now(),
+            timestamp: baseTimestamp + newIntels.length,
           });
         }
       }
@@ -274,7 +276,7 @@ export const DialogScreen: React.FC = () => {
 
     const timestamp = Date.now();
     const userMessage: Message = {
-      id: `${timestamp}_user`,
+      id: generateMessageId('user'),
       role: 'user',
       content: inputText.trim(),
       timestamp,
@@ -356,9 +358,10 @@ export const DialogScreen: React.FC = () => {
       // 添加第一条消息
       if (messageParts.length > 0) {
         const baseTimestamp = Date.now();
+        const messageRole = targetCharacter ? 'character' : 'dm';
         const firstAiMessage: Message = {
-          id: `${baseTimestamp}_ai_0`,
-          role: targetCharacter ? 'character' : 'dm',
+          id: generateMessageId(messageRole as 'character' | 'dm', 0),
+          role: messageRole as 'character' | 'dm',
           characterId: targetCharacter?.id,
           content: messageParts[0],
           reasoning: result.reasoning,
@@ -373,8 +376,8 @@ export const DialogScreen: React.FC = () => {
             await new Promise(resolve => setTimeout(resolve, 800)); // 延迟 800ms
 
             const nextMessage: Message = {
-              id: `${baseTimestamp}_ai_${i}`,
-              role: targetCharacter ? 'character' : 'dm',
+              id: generateMessageId(messageRole as 'character' | 'dm', i),
+              role: messageRole as 'character' | 'dm',
               characterId: targetCharacter?.id,
               content: messageParts[i],
               timestamp: baseTimestamp + i,
@@ -396,16 +399,16 @@ export const DialogScreen: React.FC = () => {
 
           // 构建所有新消息
           const messageRole = targetCharacter ? 'character' : 'dm';
-          const baseTimestamp = Date.now();
+          const saveTimestamp = Date.now();
           const allNewMessages: Message[] = [
             userMessage,
             ...messageParts.map((part, index) => ({
-              id: `${baseTimestamp}_msg_${index}`,
+              id: generateMessageId(messageRole as 'character' | 'dm', index),
               role: messageRole as 'character' | 'dm',
               characterId: targetCharacter?.id,
               content: part,
               reasoning: index === 0 ? result.reasoning : undefined,
-              timestamp: baseTimestamp + index,
+              timestamp: saveTimestamp + index,
             }))
           ];
 
@@ -815,8 +818,8 @@ export const DialogScreen: React.FC = () => {
                         <View style={styles.clueSection}>
                           <Text style={styles.clueSectionTitle}>人物情报</Text>
                           {/* 按人物分组 */}
-                          {Array.from(new Set(intels.filter(i => i.type === 'character').map(i => i.target))).map(target => (
-                            <View key={target} style={styles.intelGroup}>
+                          {Array.from(new Set(intels.filter(i => i.type === 'character').map(i => i.target))).map((target, index) => (
+                            <View key={`character_${target}_${index}`} style={styles.intelGroup}>
                               <View style={styles.intelTargetHeader}>
                                 <Feather name="user" size={16} color={COLORS.accent} />
                                 <Text style={styles.intelTargetName}>{target}</Text>
@@ -839,8 +842,8 @@ export const DialogScreen: React.FC = () => {
                         <View style={styles.clueSection}>
                           <Text style={styles.clueSectionTitle}>物品情报</Text>
                           {/* 按物品分组 */}
-                          {Array.from(new Set(intels.filter(i => i.type === 'item').map(i => i.target))).map(target => (
-                            <View key={target} style={styles.intelGroup}>
+                          {Array.from(new Set(intels.filter(i => i.type === 'item').map(i => i.target))).map((target, index) => (
+                            <View key={`item_${target}_${index}`} style={styles.intelGroup}>
                               <View style={styles.intelTargetHeader}>
                                 <Feather name="package" size={16} color={COLORS.accent} />
                                 <Text style={styles.intelTargetName}>{target}</Text>

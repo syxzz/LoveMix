@@ -39,18 +39,45 @@ export const ResultScreen: React.FC = () => {
   const { success, scriptId } = route.params;
   const videoTask = useAtomValue(videoTaskAtom);
   const [script, setScript] = useState<Script | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     getScriptById(scriptId).then((data) => setScript(data || null));
   }, []);
 
+  // 调试视频任务状态
+  useEffect(() => {
+    console.log('📹 视频任务状态:', {
+      status: videoTask.status,
+      videoUrl: videoTask.videoUrl,
+      error: videoTask.error,
+    });
+  }, [videoTask]);
+
   const videoSource = videoTask.status === 'success' && videoTask.videoUrl
     ? videoTask.videoUrl
     : null;
 
+  // 只在有视频源时创建播放器
   const player = useVideoPlayer(videoSource, (p) => {
-    p.loop = false;
+    if (videoSource) {
+      p.loop = false;
+      p.muted = false;
+    }
   });
+
+  // 监听播放状态
+  useEffect(() => {
+    if (!player) return;
+
+    const subscription = player.addListener('playingChange', (event) => {
+      setIsPlaying(event.isPlaying);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [player]);
 
   const murdererChar = script?.characters.find(c => c.id === script.murderer);
   const truth = {
@@ -67,8 +94,28 @@ export const ResultScreen: React.FC = () => {
   };
 
   const handlePlayVideo = () => {
-    if (player) {
-      player.play();
+    console.log('🎬 播放按钮被点击', {
+      player: !!player,
+      videoSource,
+      isPlaying,
+      playerStatus: player?.status,
+    });
+
+    if (!player || !videoSource) {
+      console.warn('⚠️ 播放器或视频源不可用');
+      return;
+    }
+
+    try {
+      if (isPlaying) {
+        console.log('⏸️ 暂停视频');
+        player.pause();
+      } else {
+        console.log('▶️ 播放视频');
+        player.play();
+      }
+    } catch (error) {
+      console.error('❌ 播放视频失败:', error);
     }
   };
 
@@ -98,8 +145,9 @@ export const ResultScreen: React.FC = () => {
               player={player}
               style={styles.video}
               contentFit="contain"
-              nativeControls
-              fullscreenOptions={{ enable: true }}
+              nativeControls={true}
+              allowsFullscreen={true}
+              allowsPictureInPicture={false}
             />
             <TouchableOpacity
               style={styles.playButton}
@@ -112,8 +160,14 @@ export const ResultScreen: React.FC = () => {
                 end={{ x: 1, y: 0 }}
                 style={styles.playButtonGradient}
               >
-                <Feather name="play" size={20} color={COLORS.textLight} />
-                <Text style={styles.playButtonText}>播放场景还原</Text>
+                <Feather
+                  name={isPlaying ? "pause" : "play"}
+                  size={20}
+                  color={COLORS.textLight}
+                />
+                <Text style={styles.playButtonText}>
+                  {isPlaying ? '暂停播放' : '播放场景还原'}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -319,21 +373,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
   },
   video: {
     width: VIDEO_WIDTH,
     height: VIDEO_HEIGHT,
+    backgroundColor: '#000',
   },
   playButton: {
     borderBottomLeftRadius: RADIUS.large,
     borderBottomRightRadius: RADIUS.large,
     overflow: 'hidden',
+    marginTop: -1, // 确保与视频无缝连接
   },
   playButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
     gap: 10,
   },
   playButtonText: {

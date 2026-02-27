@@ -68,26 +68,36 @@ const AuthCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // 后台初始化剧本封面（不阻塞主流程）
     initializeScriptCovers();
 
-    // 如果使用 Firebase，监听认证状态变化
-    if (USE_FIREBASE && onAuthStateChanged) {
-      const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
-        if (firebaseUser) {
-          setUser(firebaseUser);
-          setIsAuthenticated(true);
-          return;
-        }
-        // Firebase 返回 null 时（如冷启动尚未恢复会话），先尝试用本地存储恢复，避免清空已登录用户
-        const stored = await getCurrentUser();
-        if (stored) {
-          setUser(stored);
-          setIsAuthenticated(true);
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
-        }
+    // 如果使用 Firebase，初始化连接并监听认证状态变化
+    if (USE_FIREBASE) {
+      // 初始化 Firebase 连接
+      import('./src/config/firebase').then(({ initConnection }) => {
+        initConnection().catch(err => {
+          console.warn('⚠️ Firebase 连接初始化失败:', err.message);
+        });
       });
 
-      return () => unsubscribe();
+      // 监听认证状态变化
+      if (onAuthStateChanged) {
+        const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
+          if (firebaseUser) {
+            setUser(firebaseUser);
+            setIsAuthenticated(true);
+            return;
+          }
+          // Firebase 返回 null 时（如冷启动尚未恢复会话），先尝试用本地存储恢复，避免清空已登录用户
+          const stored = await getCurrentUser();
+          if (stored) {
+            setUser(stored);
+            setIsAuthenticated(true);
+          } else {
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        });
+
+        return () => unsubscribe();
+      }
     }
   }, []);
 

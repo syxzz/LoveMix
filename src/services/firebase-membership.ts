@@ -74,8 +74,21 @@ export const getMembership = async (userId: string): Promise<Membership> => {
 
     await saveMembership(defaultMembership);
     return defaultMembership;
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取会员信息失败:', error);
+
+    // 如果是离线错误，返回默认会员信息而不是抛出错误
+    if (error?.code === 'unavailable' || error?.message?.includes('offline')) {
+      console.warn('⚠️ Firebase 离线，返回默认会员信息');
+      return {
+        userId,
+        tier: 'free',
+        points: 100,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+    }
+
     throw error;
   }
 };
@@ -213,8 +226,15 @@ export const consumePoints = async (
     const discountedAmount = Math.ceil(amount * (tierConfig?.pointsDiscount || 1.0));
 
     return await updatePoints(userId, -discountedAmount, 'consume', description, relatedId);
-  } catch (error) {
+  } catch (error: any) {
     console.error('消费积分失败:', error);
+
+    // 如果是离线错误，返回当前会员信息而不是抛出错误
+    if (error?.code === 'unavailable' || error?.message?.includes('offline')) {
+      console.warn('⚠️ Firebase 离线，跳过积分扣除');
+      return await getMembership(userId);
+    }
+
     throw error;
   }
 };
