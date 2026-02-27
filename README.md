@@ -1,4 +1,4 @@
-# 🎭 LoveMix - AI 驱动的剧本杀游戏平台
+# 🎭 Mirrage - AI 驱动的剧本杀游戏平台
 
 <div align="center">
 
@@ -63,7 +63,7 @@
 ```bash
 # 1. 克隆项目
 git clone <repository-url>
-cd LoveMix
+cd mirrage
 
 # 2. 安装依赖
 npm install
@@ -128,10 +128,9 @@ npm start
 ## 📁 项目结构
 
 ```
-LoveMix/
+Mirrage/
 ├── src/
 │   ├── components/          # 可复用组件
-│   │   ├── GradientButton.tsx
 │   │   ├── ImageUploader.tsx
 │   │   ├── LanguageSelector.tsx
 │   │   ├── LoadingHeart.tsx
@@ -157,7 +156,7 @@ LoveMix/
 │   ├── services/            # 服务层
 │   │   ├── ai.ts           # AI 对话服务
 │   │   ├── storage.ts      # 本地存储服务
-│   │   └── firebase.ts     # Firebase 服务
+│   │   └── auth.ts         # 认证服务
 │   │
 │   ├── data/               # 数据层
 │   │   └── scripts.ts      # 剧本数据
@@ -368,297 +367,6 @@ MIT License
 
 **用 ❤️ 和 ☕ 制作**
 
-[⬆ 回到顶部](#-lovemix---ai-驱动的剧本杀游戏平台)
+[⬆ 回到顶部](#-mirrage---ai-驱动的剧本杀游戏平台)
 
 </div>
-
-cd LoveMix
-```
-
-2. **安装依赖**
-```bash
-npm install
-```
-
-3. **启动开发服务器**
-```bash
-npx expo start
-```
-
-4. **运行应用**
-- iOS: 按 `i` 或扫描二维码
-- Android: 按 `a` 或扫描二维码
-- Web: 按 `w` (部分功能可能不可用)
-
-## 🔑 API密钥配置
-
-LoveMix 支持真实的AI生成功能，需要配置以下API密钥：
-
-### 1. Replicate API (用于图像生成)
-
-**获取步骤：**
-1. 访问 [replicate.com](https://replicate.com)
-2. 注册并登录账户
-3. 进入 Account Settings
-4. 在 API Tokens 页面创建新的 API Token
-5. 复制 API Token
-
-**用途：**
-- AI头像融合
-- 虚拟约会场景生成
-- 表情包生成
-
-### 2. OpenAI API (用于文案生成)
-
-**获取步骤：**
-1. 访问 [platform.openai.com](https://platform.openai.com)
-2. 注册并登录账户
-3. 进入 API Keys 页面
-4. 点击 "Create new secret key"
-5. 复制生成的密钥（只显示一次）
-
-**用途：**
-- 纪念日卡片文案生成
-- 表情包文案优化
-
-### 配置方式
-
-在应用中进入"设置"页面，输入获取的API密钥并保存。密钥将使用 Expo Secure Store 加密存储在本地。
-
-**注意：** 如果不配置API密钥，应用将使用模拟数据，所有功能仍可正常体验。
-
-## 📁 项目结构
-
-```
-LoveMix/
-├── App.tsx                          # 主入口文件，配置导航和认证
-├── babel.config.js                  # Babel配置
-├── tailwind.config.js               # Tailwind CSS配置
-├── package.json                     # 项目依赖
-├── tsconfig.json                    # TypeScript配置
-│
-├── src/
-│   ├── screens/                     # 页面组件
-│   │   ├── WelcomeScreen.tsx        # 欢迎引导页
-│   │   ├── LoginScreen.tsx          # 登录页面
-│   │   ├── RegisterScreen.tsx       # 注册页面
-│   │   ├── ForgotPasswordScreen.tsx # 忘记密码页面
-│   │   ├── HomeScreen.tsx           # 首页 - 四个功能入口
-│   │   ├── FaceMergeScreen.tsx      # AI头像融合页面
-│   │   ├── CardScreen.tsx           # 纪念日卡片页面
-│   │   ├── DateScreen.tsx           # 虚拟约会场景页面
-│   │   ├── StickerScreen.tsx        # 表情包生成页面
-│   │   ├── ProfileScreen.tsx        # 个人资料页面
-│   │   ├── MembershipScreen.tsx     # 会员订阅页面
-│   │   ├── HistoryScreen.tsx        # 作品历史页面
-│   │   ├── CommunityScreen.tsx      # 社区广场页面
-│   │   └── SettingsScreen.tsx       # 设置页面
-│   │
-│   ├── components/                  # 可复用组件
-│   │   ├── ImageUploader.tsx        # 图片上传组件
-│   │   ├── GradientButton.tsx       # 渐变按钮组件
-│   │   ├── LoadingHeart.tsx         # 心跳加载动画
-│   │   ├── ResultCard.tsx           # 结果展示卡片
-│   │   ├── SceneSelector.tsx        # 场景选择器
-│   │   └── TabBar.tsx               # 底部导航栏
-│   │
-│   ├── services/                    # 服务层
-│   │   ├── auth.ts                  # 认证服务
-│   │   ├── replicate.ts             # Replicate API调用
-│   │   ├── openai.ts                # OpenAI API调用
-│   │   └── storage.ts               # 本地存储服务
-│   │
-│   ├── hooks/                       # 自定义Hooks
-│   │   ├── useImagePicker.ts        # 图片选择Hook
-│   │   └── useAPIKeys.ts            # API密钥管理Hook
-│   │
-│   ├── utils/                       # 工具函数
-│   │   ├── constants.ts             # 常量配置
-│   │   └── helpers.ts               # 辅助函数
-│   │
-│   ├── types/                       # TypeScript类型定义
-│   │   ├── index.ts                 # 全局类型
-│   │   ├── user.ts                  # 用户相关类型
-│   │   └── history.ts               # 历史记录类型
-│   │
-│   └── store/                       # 状态管理
-│       └── index.ts                 # Jotai状态定义
-│
-└── assets/                          # 静态资源
-    ├── fonts/                       # 字体文件
-    └── images/                      # 图片资源
-```
-
-## 🎯 核心功能实现
-
-### 图片处理流程
-1. 使用 `expo-image-picker` 选择或拍摄照片
-2. 图片在本地预览和编辑
-3. 调用API时发送图片数据
-4. 接收生成结果并展示
-5. 使用 `expo-media-library` 保存到相册
-
-### 数据存储策略
-- **普通数据**: AsyncStorage (爱心值、生成历史)
-- **敏感数据**: Expo Secure Store (API密钥，加密存储)
-- **临时数据**: 组件状态 (useState, Jotai)
-
-### 离线体验
-- 未配置API密钥时自动使用模拟数据
-- 所有功能均可离线体验
-- 模拟API延迟，提供真实的加载体验
-
-## 🎨 UI/UX 设计规范
-
-### 颜色系统
-```typescript
-primary: '#FF69B4'      // 热情粉
-secondary: '#87CEEB'    // 天空蓝
-background: '#FFFFFF'   // 纯白
-cardBg: '#F8F9FA'       // 浅灰
-textDark: '#2C3E50'     // 深灰
-```
-
-### 圆角规范
-```typescript
-small: 12px      // 按钮内部元素
-medium: 20px     // 卡片
-large: 24px      // 上传框
-xlarge: 32px     // 主按钮
-```
-
-### 间距规范
-```typescript
-xs: 8px
-sm: 12px
-md: 16px
-lg: 20px
-xl: 24px
-xxl: 32px
-```
-
-### 字体规范
-```typescript
-small: 14px      // 小字
-regular: 16px    // 正文
-button: 18px     // 按钮
-subtitle: 20px   // 副标题
-title: 28px      // 标题
-```
-
-## 🔧 开发指南
-
-### 添加新功能
-
-1. **创建新页面**
-```typescript
-// src/screens/NewFeatureScreen.tsx
-import React from 'react';
-import { View, Text } from 'react-native';
-
-export const NewFeatureScreen: React.FC = () => {
-  return (
-    <View>
-      <Text>New Feature</Text>
-    </View>
-  );
-};
-```
-
-2. **添加路由**
-```typescript
-// App.tsx
-<Stack.Screen name="NewFeature" component={NewFeatureScreen} />
-```
-
-3. **更新类型定义**
-```typescript
-// src/types/index.ts
-export type RootStackParamList = {
-  // ...existing routes
-  NewFeature: undefined;
-};
-```
-
-### 调试技巧
-
-- 使用 `console.log` 查看日志
-- Expo DevTools: 按 `m` 打开菜单
-- React DevTools: 在浏览器中调试
-- 网络请求: 使用 Reactotron 或 Flipper
-
-## 📱 兼容性
-
-- **iOS**: 13.0+
-- **Android**: 5.0+ (API Level 21+)
-- **Web**: 部分功能支持
-
-## 🔒 隐私与安全
-
-- 所有数据存储在本地设备
-- API密钥使用 Expo Secure Store 加密存储
-- 不上传任何个人信息到第三方服务器
-- 图片处理在本地完成
-
-## 🐛 常见问题
-
-### Q: 为什么生成的图片是占位图？
-A: 这是因为未配置API密钥，应用使用了模拟数据。请在设置页面配置 Replicate API 密钥。
-
-### Q: 如何保存生成的图片？
-A: 点击结果卡片下方的"保存"按钮，图片将保存到系统相册。首次使用需要授予相册权限。
-
-### Q: 应用支持哪些语言？
-A: 目前仅支持简体中文。
-
-### Q: 可以在多个设备间同步数据吗？
-A: 目前不支持云同步，所有数据仅存储在本地设备。
-
-## 🚧 未来计划
-
-### 短期优化
-- [ ] 接入真实支付系统(微信支付/支付宝)
-- [ ] 实现真实的后端API
-- [ ] 添加数据云端同步
-- [ ] 实现推送通知
-
-### 中期规划
-- [ ] 添加社交功能(关注、评论)
-- [ ] 实现作品分享到社交平台
-- [ ] 添加每日签到和任务系统
-- [ ] 实现积分商城
-- [ ] 深色模式
-
-### 长期规划
-- [ ] AI模型优化和定制
-- [ ] 更多创意功能
-- [ ] 企业版/定制版
-- [ ] 国际化支持
-- [ ] 支持视频生成功能
-
-## 📚 文档
-
-- [升级指南](UPGRADE_GUIDE.md) - 商业化升级详细说明
-- [用户指南](USER_GUIDE.md) - 完整的用户使用手册
-- [快速开始](QUICKSTART.md) - 开发快速入门
-- [项目总结](PROJECT_SUMMARY.md) - 项目概览
-
-## 📄 许可证
-
-MIT License
-
-## 👥 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📧 联系方式
-
-如有问题或建议，请通过以下方式联系：
-- GitHub Issues
-- Email: support@lovemix.app
-
----
-
-**用爱创造，用AI实现 ❤️**
-
-Made with ❤️ by LoveMix Team
